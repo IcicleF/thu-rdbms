@@ -27,9 +27,17 @@
 *.lib
 
 # Executables
+dbmain
 *.exe
 *.out
 *.app
+
+# CMake
+
+CMakeFiles/*
+cmake_install.cmake
+CMakeCache.txt
+Makefile
 
 # Temporary Storage
 temp/*
