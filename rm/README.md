@@ -31,7 +31,7 @@ struct Column {
     ColumnType type;
     int width;
     bool notnull;
-    function<bool(Column)> constraint;
+    string constraint;
 };
 ```
 
@@ -50,6 +50,8 @@ struct Table {
     vector<ForeignKey> foreign;
 };
 ```
+
+这些内容以纯文本形式存储。
 
 ### table
 
