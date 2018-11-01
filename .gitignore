@@ -47,3 +47,4 @@ src/include/pf/*
 
 # Other Stuff
 .DS_Store
+.vscode/*
