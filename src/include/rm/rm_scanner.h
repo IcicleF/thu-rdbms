@@ -3,6 +3,9 @@
 
 #include "rm/rm_record.h"
 #include "rm/rm_file.h"
+#include "pf/bufmanager/BufPageManager.h"
+#include "pf/fileio/FileManager.h"
+#include "pf/utils/pagedef.h"
 
 enum AttrType {
     INT,
