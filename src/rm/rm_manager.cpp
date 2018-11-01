@@ -18,11 +18,11 @@ void RMManager::createFile(const char *fileName, int recordSize)
 {
     int fileId,index;
     BufType b;
-    if (recordSize > PAGE_SIZE){
+    if (recordSize > PAGE_SIZE - PAGE_HEADER - sizeof(ushort)){
     }
     else{
-        fm -> createfile(fileName);
-        fm -> openfile(fileName, fileId);
+        fm -> createFile(fileName);
+        fm -> openFile(fileName, fileId);
         b = bpm -> allocPage(fileId, 0, index, false);
         b[0] = recordSize;
         bpm -> markDirty(index);
@@ -32,13 +32,11 @@ void RMManager::createFile(const char *fileName, int recordSize)
 RMFile RMManager::openFile(const char *fileName)
 {
     int fileId;
-    fm -> openfile(fileName, fileId);
-    RMFile rs = new RMFile();
-    rs -> fileId = fileId;
-    return rs;
+    fm -> openFile(fileName, fileId);
+    return RMFile(bpm, fileId);
 }
 
 void RMManager::closeFile(RMFile &RM)
 {
-    fm -> closeFile(RM->fileId);
+    fm -> closeFile(RM.fileId);
 }

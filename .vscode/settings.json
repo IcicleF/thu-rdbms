@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.tcc": "cpp",
+        "type_traits": "cpp",
+        "cstring": "cpp",
+        "cassert": "cpp"
+    }
+}
