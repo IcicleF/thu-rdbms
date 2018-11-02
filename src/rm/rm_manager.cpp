@@ -18,7 +18,7 @@ void RMManager::createFile(const char *fileName, int recordSize)
 {
     int fileId,index;
     BufType b;
-    if (recordSize > PAGE_SIZE - PAGE_HEADER - sizeof(ushort)){
+    if (recordSize > PAGE_SIZE - PAGE_HEADER - 2 * sizeof(ushort)){
     }
     else{
         fm -> createFile(fileName);

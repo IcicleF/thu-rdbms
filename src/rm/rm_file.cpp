@@ -4,10 +4,6 @@
 #include <cstring>
 #include <cassert>
 
-#define extRecSize (recSize + sizeof(ushort) * 2)
-#define PREV(x) ((ushort*)(x + recSize))
-#define NEXT(x) (PREV(x) + sizeof(ushort))
-
 int index;
 
 RMFile::RMFile() {
