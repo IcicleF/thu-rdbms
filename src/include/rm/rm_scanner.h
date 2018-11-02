@@ -1,14 +1,13 @@
 #ifndef RM_SCANNER_H
 #define RM_SCANNER_H
 
+#include "rid.h"
 #include "rm/rm_record.h"
 #include "rm/rm_file.h"
 #include "pf/bufmanager/BufPageManager.h"
 #include "pf/fileio/FileManager.h"
 #include "pf/utils/pagedef.h"
 #include<vector>
-#include<utility>
-typedef pair<int,int> PI;
 
 enum AttrType {
     INT,
@@ -34,8 +33,10 @@ class RMScanner {
         bool nextRec(RMRecord&);
         void closeScan();
     private:
-        vector<PI> res;
-        void ScanPage(CharBufType);
+        int limit,bz;//the total number of records & the present tag location
+        vector<RMRecord> res;
+        void ScanPage(const RMFile&, CharBufType, AttrType, int, int, ScanType, void*);
+        void vcompare(AttrType, ScanType, CharBufType, void*);
 };
 
 #endif
