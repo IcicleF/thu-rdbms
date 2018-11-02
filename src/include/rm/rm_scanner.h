@@ -10,7 +10,7 @@
 #include<vector>
 
 enum AttrType {
-    INT,
+    INTEGER,
     FLOAT,
     STRING
 };
@@ -36,7 +36,7 @@ class RMScanner {
         int limit,bz;//the total number of records & the present tag location
         vector<RMRecord> res;
         void ScanPage(const RMFile&, CharBufType, AttrType, int, int, ScanType, void*);
-        void vcompare(AttrType, ScanType, CharBufType, void*);
+        bool vcompare(AttrType, ScanType, CharBufType, void*);
 };
 
 #endif

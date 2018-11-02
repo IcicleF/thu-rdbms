@@ -14,6 +14,7 @@
 class RMRecord {
     public:
         RMRecord();
+        RMRecord(const RMRecord&);
         RMRecord(const RID&, const char*);
         RMRecord(const RID&, const std::string& data);
         ~RMRecord();

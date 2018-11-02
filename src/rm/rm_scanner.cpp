@@ -15,24 +15,24 @@ RMScanner::~RMScanner()
 
 bool RMScanner::vcompare(AttrType type, ScanType comp, CharBufType b, void *value)
 {
-    int vt,stdi;
+    int vi,stdi;
     float vf,stdf;
     string vs,stds;
     
     if(value==NULL)return true;
     switch(type)
     {
-        case INT:
+        case INTEGER:
         {
             vi = atoi((char *)b);
-            stdi = atoi((char *)b);
+            stdi = atoi((char *)value);
             break;
         }
         
         case FLOAT:
         {
-            vf = atof((char *b));
-            stdf = atof((char *b));
+            vf = atof((char *)b);
+            stdf = atof((char *)value);
             break;
         }
         
@@ -45,7 +45,7 @@ bool RMScanner::vcompare(AttrType type, ScanType comp, CharBufType b, void *valu
         
         default:
         {
-            raise(WRONG_SCAN_TYPE);
+            raise(E_RM_WRONGSCANTYPE);
             return false;
         }
     }
@@ -54,37 +54,37 @@ bool RMScanner::vcompare(AttrType type, ScanType comp, CharBufType b, void *valu
     {
         case ST_EQ:
         {
-            if(type==INT)return vi==stdi;
+            if(type==INTEGER)return vi==stdi;
             if(type==FLOAT)return vf==stdf;
             if(type==STRING)return vs==stds;
         }
         case ST_LT:
         {
-            if(type==INT)return vi<stdi;
+            if(type==INTEGER)return vi<stdi;
             if(type==FLOAT)return vf<stdf;
             if(type==STRING)return vs<stds;
         }
         case ST_GT:
         {
-            if(type==INT)return vi>stdi;
+            if(type==INTEGER)return vi>stdi;
             if(type==FLOAT)return vf>stdf;
             if(type==STRING)return vs>stds;
         }
         case ST_LE:
         {
-            if(type==INT)return vi<=stdi;
+            if(type==INTEGER)return vi<=stdi;
             if(type==FLOAT)return vf<=stdf;
             if(type==STRING)return vs<=stds;
         }
         case ST_GE:
         {
-            if(type==INT)return vi>=stdi;
+            if(type==INTEGER)return vi>=stdi;
             if(type==FLOAT)return vf>=stdf;
             if(type==STRING)return vs>=stds;
         }
         case ST_NE:
         {
-            if(type==INT)return vi!=stdi;
+            if(type==INTEGER)return vi!=stdi;
             if(type==FLOAT)return vf!=stdf;
             if(type==STRING)return vs!=stds;
         }
@@ -93,25 +93,27 @@ bool RMScanner::vcompare(AttrType type, ScanType comp, CharBufType b, void *valu
             return true;
         }
     }
+    return false;
 }
 
-void RMScanner::ScanPage(const RMFile &rmf, CharBufType b, int AttrLength, int AttrOffset, ScanType comp, void *value)
+void RMScanner::ScanPage(const RMFile &rmf, CharBufType b, AttrType type, int AttrLength, int AttrOffset, ScanType comp, void *value)
 {
     ushort occ = rmf.getOccPtr(b);
     CharBufType temp = new uchar[AttrLength + 5];
-    CharBufType tb, tnext;
+    CharBufType tb;
+    ushort* tnext = new ushort;
     RID trid;
     RMRecord trec;
     
     tb = b + occ;
-    tnext = new uchar();
     (*tnext) = occ;
-    while(true){
+    int recSize = rmf.recSize;
+    while (true){
         for (int i = 0 ; i < AttrLength ; i++)temp[i] = tb[AttrOffset + i];
         temp[AttrLength] = 0;//cut out the value from the record
         if(vcompare(type, comp, temp, value)){
             trid = RID(PageId, (*tnext));
-            trec = RMRecord(trid, tb);
+            trec = RMRecord(trid, (char *)tb);
             res.push_back(trec);
         }
         tnext = NEXT(tb);
@@ -122,8 +124,7 @@ void RMScanner::ScanPage(const RMFile &rmf, CharBufType b, int AttrLength, int A
 }
 
 //Scan all the records that satisfies the scan condition
-void RMScanner::OpenScan(const RMFile &rmf, AttrType type, int AttrLength, int AttrOffset, ScanType comp, void *value){
-{
+void RMScanner::openScan(const RMFile &rmf, AttrType type, int AttrLength, int AttrOffset, ScanType comp, void *value){
     int index;
     CharBufType b;
     PageId = 0;
@@ -131,9 +132,9 @@ void RMScanner::OpenScan(const RMFile &rmf, AttrType type, int AttrLength, int A
     limit = 0;
     bz = 0;
     while (true) {
-        CharBufType b = (CharBufType)rmf.bpm -> getPage(rmf.fileId, PageId, index);
+        CharBufType b = (CharBufType)rmf.bpmgr -> getPage(rmf.fileId, PageId, index);
         if (b[USED_SIZE_LOC] == 0)break;
-        ScanPage(rmf, b, AttrLength, AttrOffset);
+        ScanPage(rmf, b, type, AttrLength, AttrOffset, comp, value);
         PageId++;
     }
     limit = res.size();
@@ -147,7 +148,7 @@ bool RMScanner::nextRec(RMRecord &rc)
     return true;
 }
 
-void RMScanner::CloseScan()
+void RMScanner::closeScan()
 {
     res.clear();
     limit = 0;

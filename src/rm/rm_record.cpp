@@ -1,10 +1,15 @@
 #include <cstring>
-#include "rm_record.h"
+#include "rm/rm_record.h"
 
 using std::string;
 
 RMRecord::RMRecord() {
     // Nothing special.
+}
+
+RMRecord::RMRecord(const RMRecord& b) {
+    rid = b.rid;
+    data = b.data;
 }
 
 RMRecord::RMRecord(const RID& rid, const char* data) {

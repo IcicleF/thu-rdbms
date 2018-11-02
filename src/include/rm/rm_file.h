@@ -21,6 +21,8 @@ typedef uchar* CharBufType;
 class RMFile {
     public:
         int fileId;
+        int recSize;
+        BufPageManager* bpmgr;
 
     public:
         RMFile();
@@ -31,21 +33,7 @@ class RMFile {
         RID insertRec(const char*);
         void deleteRec(const RID&);
         void updateRec(const RMRecord&);
-    
-    private:
-        int recSize;
-        BufPageManager* bpmgr;
-        
-        void getRecordSize() {
-            BufType b = bpmgr->getPage(fileId, 0, index);
-            recSize = int(b[0]) + sizeof(short);
-        }
-        static void formatPage(CharBufType cb) {
-            ShortBufType b = (ShortBufType)cb;
-            b[EMPTY_PTR_LOC] = PAGE_HEADER;
-            b[OCC_PTR_LOC] = 0;
-            b[USED_SIZE_LOC] = PAGE_HEADER;
-        }
+
         static ushort getEmptyPtr(CharBufType cb) {
             ShortBufType b = (ShortBufType)cb;
             return b[EMPTY_PTR_LOC];
@@ -69,6 +57,17 @@ class RMFile {
         static void setUsedSize(CharBufType cb, ushort size) {
             ShortBufType b = (ShortBufType)cb;
             b[USED_SIZE_LOC] = size;
+        }
+        void getRecordSize() {
+            int ind;
+            BufType b = bpmgr->getPage(fileId, 0, ind);
+            recSize = int(b[0]) + sizeof(short);
+        }
+        static void formatPage(CharBufType cb) {
+            ShortBufType b = (ShortBufType)cb;
+            b[EMPTY_PTR_LOC] = PAGE_HEADER;
+            b[OCC_PTR_LOC] = 0;
+            b[USED_SIZE_LOC] = PAGE_HEADER;
         }
 };
 
