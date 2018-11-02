@@ -13,7 +13,7 @@
 
 #define extRecSize (recSize + sizeof(ushort) * 2)
 #define PREV(x) ((ushort*)(x + recSize))
-#define NEXT(x) (PREV(x) + sizeof(ushort))
+#define NEXT(x) (PREV(x) + 1)
 
 typedef ushort* ShortBufType;
 typedef uchar* CharBufType;
@@ -61,7 +61,7 @@ class RMFile {
         void getRecordSize() {
             int ind;
             BufType b = bpmgr->getPage(fileId, 0, ind);
-            recSize = int(b[0]) + sizeof(short);
+            recSize = int(b[0]);
         }
         static void formatPage(CharBufType cb) {
             ShortBufType b = (ShortBufType)cb;

@@ -3,6 +3,8 @@
 #include "errs.h"
 #include <cstring>
 #include <cassert>
+#include <iostream>
+using namespace std;
 
 int ind;
 
@@ -77,10 +79,13 @@ RID RMFile::insertRec(const char* data) {
             ushort* nprev = PREV(b + *next);
             *nprev = 0;
         }
+
         setEmptyPtr(b, *next);
         ushort occ = getOccPtr(b);
-        ushort* f_nprev = PREV(b + occ);
-        *f_nprev = slot;
+        if (occ != 0) {
+            ushort* f_nprev = PREV(b + occ);
+            *f_nprev = slot;
+        }
         *next = occ;
         setOccPtr(b, slot);
     }
@@ -93,6 +98,7 @@ void RMFile::deleteRec(const RID& rid) {
         return;
     }
     CharBufType b = (CharBufType)bpmgr->getPage(fileId, rid.getPage(), ind);
+    bpmgr->markDirty(ind);
     int slot = rid.getSlot();
     if (slot < 0 || slot + extRecSize > PAGE_SIZE) {
         raise(E_RM_INVSLOT);
@@ -100,6 +106,7 @@ void RMFile::deleteRec(const RID& rid) {
     }
     ushort* prev = PREV(b + slot);
     ushort* next = NEXT(b + slot);
+    cout << *prev << " " << *next << endl;
     if (*prev != 0) {
         ushort* pnext = NEXT(b + *prev);
         *pnext = *next;
@@ -119,6 +126,7 @@ void RMFile::updateRec(const RMRecord& rec) {
     }
     RID rid = rec.getRID();
     CharBufType b = (CharBufType)bpmgr->getPage(fileId, rid.getPage(), ind);
+    bpmgr->markDirty(ind);
     int slot = rid.getSlot();
     if (slot < 0 || slot + extRecSize > PAGE_SIZE) {
         raise(E_RM_INVSLOT);

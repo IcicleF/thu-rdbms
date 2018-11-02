@@ -8,6 +8,8 @@
 using namespace std;
 
 int main() {
+    char dat[25];
+
     RMManager manager;
     manager.createFile("test.txt", 20);
     RMFile fh = manager.openFile("test.txt");
@@ -19,6 +21,22 @@ int main() {
 
     fh.deleteRec(r3);
 
+    RID r5 = fh.insertRec("abcde1234567890fghij");
+
+    RMRecord rc1 = fh.getRec(r1);
+    rc1.getData(dat);
+    cout << dat << endl;
+
+    rc1 = fh.getRec(r2);
+    rc1.getData(dat);
+    cout << dat << endl;
+
+    rc1 = fh.getRec(r5);
+    rc1.getData(dat);
+    cout << dat << endl;
+
+    cout << "Err=" << errcode() << endl;
+
     RMScanner sc;
     char *val = new char[6];
     strcpy(val, "ddddd");
@@ -26,7 +44,6 @@ int main() {
 
     RMRecord rec;
     while (sc.nextRec(rec)) {
-        char dat[25];
         rec.getData(dat);
         cout << "Dat="<< dat << endl;
         cin >> dat;
