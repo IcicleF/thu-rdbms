@@ -6,6 +6,18 @@
 #include "rm/rm_record.h"
 #include "pf/bufmanager/BufPageManager.h"
 
+#define PAGE_HEADER 16
+#define EMPTY_PTR_LOC 2
+#define OCC_PTR_LOC 3
+#define USED_SIZE_LOC 4
+
+#define extRecSize (recSize + sizeof(ushort) * 2)
+#define PREV(x) ((ushort*)(x + recSize))
+#define NEXT(x) (PREV(x) + sizeof(ushort))
+
+typedef ushort* ShortBufType;
+typedef uchar* CharBufType;
+
 class RMFile {
     public:
         int fileId;
