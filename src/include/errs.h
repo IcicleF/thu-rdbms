@@ -6,6 +6,7 @@ const int E_RM_FAILURE = 101;
 const int E_RM_NOBUFMGR = 102;
 const int E_RM_INVSLOT = 103;
 const int E_RM_INVEPTR = 104;
+const int E_RM_TLRCSIZE = -1;
 
 namespace __ERR_STORAGE {
     int __errcode = E_OK;

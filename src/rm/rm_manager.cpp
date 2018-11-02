@@ -1,4 +1,5 @@
 #include "rm/rm_manager.h"
+#include "errs.h"
 
 RMManager::RMManager()
 {
@@ -19,6 +20,7 @@ void RMManager::createFile(const char *fileName, int recordSize)
     int fileId,index;
     BufType b;
     if (recordSize > PAGE_SIZE - PAGE_HEADER - sizeof(ushort)){
+        raise(E_TLRCSIZE);
     }
     else{
         fm -> createFile(fileName);

@@ -6,6 +6,9 @@
 #include "pf/bufmanager/BufPageManager.h"
 #include "pf/fileio/FileManager.h"
 #include "pf/utils/pagedef.h"
+#include<vector>
+#include<utility>
+typedef pair<int,int> PI;
 
 enum AttrType {
     INT,
@@ -30,6 +33,9 @@ class RMScanner {
         void openScan(const RMFile&, AttrType, int, int, ScanType, void*);
         bool nextRec(RMRecord&);
         void closeScan();
+    private:
+        vector<PI> res;
+        void ScanPage(CharBufType);
 };
 
 #endif
