@@ -42,9 +42,6 @@ Makefile
 # Temporary Storage
 temp/*
 
-# Page File System (OS Dependent)
-src/include/pf/*
-
 # Other Stuff
 .DS_Store
 .vscode/*
