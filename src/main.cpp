@@ -46,7 +46,7 @@ int main() {
     while (sc.nextRec(rec)) {
         rec.getData(dat);
         cout << "Dat="<< dat << endl;
-        cin >> dat;
+        //cin >> dat;
     }
 
     cout << "fin" << endl;

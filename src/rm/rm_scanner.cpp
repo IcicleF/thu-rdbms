@@ -113,7 +113,7 @@ void RMScanner::ScanPage(const RMFile &rmf, CharBufType b, AttrType type, int At
         temp[AttrLength] = 0;//cut out the value from the record
         if(vcompare(type, comp, temp, value)){
             trid = RID(PageId, (*tnext));
-            trec = RMRecord(trid, (char *)tb);
+            trec = RMRecord(rmf.getRec(trid));
             res.push_back(trec);
         }
         tnext = NEXT(tb);
@@ -144,7 +144,7 @@ void RMScanner::openScan(const RMFile &rmf, AttrType type, int AttrLength, int A
 bool RMScanner::nextRec(RMRecord &rc)
 {
     if(bz>=limit)return false;
-    rc = res[bz];
+    rc = res[bz++];
     return true;
 }
 
