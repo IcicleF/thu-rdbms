@@ -40,9 +40,12 @@ int main() {
     RMScanner sc;
     char *val = new char[6];
     strcpy(val, "ddddd");
+    RMRecord rec;
+
+    sc.nextRec(rec);
+
     sc.openScan(fh, STRING, 5, 10, ST_LE, (void *)val);
 
-    RMRecord rec;
     while (sc.nextRec(rec)) {
         rec.getData(dat);
         cout << "Dat="<< dat << endl;

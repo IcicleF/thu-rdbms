@@ -29,14 +29,19 @@ class RMScanner {
         RMScanner();
         ~RMScanner();
 
-        void openScan(const RMFile&, AttrType, int, int, ScanType, void*);
+        void openScan(RMFile&, AttrType, int, int, ScanType, void*);
         bool nextRec(RMRecord&);
         void closeScan();
     private:
-        int limit,bz;//the total number of records & the present tag location
-        vector<RMRecord> res;
-        void ScanPage(const RMFile&, CharBufType, AttrType, int, int, ScanType, void*);
-        bool vcompare(AttrType, ScanType, CharBufType, void*);
+        RMFile *rmf;
+        int Length,Offset,curpageId;//the total number of records & the present tag location
+        ushort curslotId;
+        CharBufType curb;
+        AttrType type;
+        ScanType comp;
+        void *value;
+        bool vcompare(CharBufType);
+        void GetNextRec();
 };
 
 #endif

@@ -7,13 +7,15 @@ int PageId;
 
 RMScanner::RMScanner()
 {
+    Length = -1;
+    Offset = -1;
 }
 
 RMScanner::~RMScanner()
 {
 }
 
-bool RMScanner::vcompare(AttrType type, ScanType comp, CharBufType b, void *value)
+bool RMScanner::vcompare(CharBufType b)
 {
     int vi,stdi;
     float vf,stdf;
@@ -96,61 +98,65 @@ bool RMScanner::vcompare(AttrType type, ScanType comp, CharBufType b, void *valu
     return false;
 }
 
-void RMScanner::ScanPage(const RMFile &rmf, CharBufType b, AttrType type, int AttrLength, int AttrOffset, ScanType comp, void *value)
+void RMScanner::GetNextRec()
 {
-    ushort occ = rmf.getOccPtr(b);
-    CharBufType temp = new uchar[AttrLength + 5];
     CharBufType tb;
-    ushort* tnext = new ushort;
-    RID trid;
-    RMRecord trec;
-    
-    tb = b + occ;
-    (*tnext) = occ;
-    int recSize = rmf.recSize;
-    while (true){
-        for (int i = 0 ; i < AttrLength ; i++)temp[i] = tb[AttrOffset + i];
-        temp[AttrLength] = 0;//cut out the value from the record
-        if(vcompare(type, comp, temp, value)){
-            trid = RID(PageId, (*tnext));
-            trec = RMRecord(trid, (char *)tb);
-            res.push_back(trec);
-        }
-        tnext = NEXT(tb);
-        if( (*tnext)==0 ) break;
-        tb = b + (*tnext);
+    int recSize = rmf->recSize;
+    int index;
+    ushort *tnext;
+    tb = curb + curslotId;
+    tnext = NEXT(tb);
+    if ((*tnext)==0){
+        curpageId++;
+        curb = (CharBufType)rmf->bpmgr->getPage(rmf->fileId, curpageId, index);
+        if( curb[USED_SIZE_LOC] == 0) curslotId = 0;
+        else curslotId = rmf->getOccPtr(curb);
     }
-    delete temp;
+    else curslotId = (*tnext);
 }
 
 //Scan all the records that satisfies the scan condition
-void RMScanner::openScan(const RMFile &rmf, AttrType type, int AttrLength, int AttrOffset, ScanType comp, void *value){
+void RMScanner::openScan(RMFile &rmf, AttrType type, int AttrLength, int AttrOffset, ScanType comp, void *value){
     int index;
-    CharBufType b;
-    PageId = 0;
-    res.clear();
-    limit = 0;
-    bz = 0;
-    while (true) {
-        CharBufType b = (CharBufType)rmf.bpmgr -> getPage(rmf.fileId, PageId, index);
-        if (b[USED_SIZE_LOC] == 0)break;
-        ScanPage(rmf, b, type, AttrLength, AttrOffset, comp, value);
-        PageId++;
-    }
-    limit = res.size();
-    bz = 0;
+    this->rmf = &rmf;
+    curpageId = 0;
+    curb = (CharBufType) rmf.bpmgr -> getPage(rmf.fileId, curpageId, index);
+    if (curb[USED_SIZE_LOC] == 0)curslotId = 0;
+    else curslotId = rmf.getOccPtr(curb);
+    Length = AttrLength;
+    Offset = AttrOffset;
+    this->type = type;
+    this->comp = comp;
+    this->value = value;
 }
 
 bool RMScanner::nextRec(RMRecord &rc)
 {
-    if(bz>=limit)return false;
-    rc = res[bz];
-    return true;
+    CharBufType temp = new uchar[Length + 5];
+    CharBufType tb;
+    RID trid;
+
+    if (Length == -1 && Offset == -1)return false;
+    if (curb[USED_SIZE_LOC] == 0)return false;
+    while (true) {
+        tb = curb + curslotId;
+        for(int i=0; i<Length; i++){
+            temp[i] = tb[Offset + i];
+        }
+        temp[Length] = 0;
+        if(vcompare(temp)==true){
+            trid = RID(curpageId, curslotId);
+            rc = rmf->getRec(trid);
+            GetNextRec();
+            return true;
+        }
+        GetNextRec();
+        if (curb[USED_SIZE_LOC] == 0)return false;
+    }
 }
 
 void RMScanner::closeScan()
 {
-    res.clear();
-    limit = 0;
-    bz = 0;
+    Length = -1;
+    Offset = -1;
 }
