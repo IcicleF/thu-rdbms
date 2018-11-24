@@ -14,16 +14,16 @@ struct BPlusNode {
     BPlusTree* owner;
     int pageId, pageIndex;
     union {
-        BufType page;
-        CharBufType ipage;
+        CharBufType page;
         ShortBufType spage;
+        BufType ipage;
     };
 
     BPlusNode(int pageId = -1) : pageId(pageId) { }
 
     // load page from current pageId
     void getPage() {
-        page = owner->bpm->getPage(owner->fileId, pageId, pageIndex);
+        page = (CharBufType)owner->bpm->getPage(owner->fileId, pageId, pageIndex);
     }
 
     // access attrLen from owner
@@ -51,10 +51,20 @@ struct BPlusNode {
     }
 
     // get parent ptr index to self
-    short parentptr() const { return spage[4]; }
+    short parentPtr() const { return spage[4]; }
     void setParentPtr(short _pp) {
         spage[4] = _pp;
         owner->bpm->markDirty(pageIndex);
+    }
+
+    // get address of combinition of record #i
+    void* addr(int i) {
+        return val(i) - 6;
+    }
+
+    // copy attrLen + 6 bytes from addr(src) to addr(dest)
+    void copy(int dest, int src) {
+        memcpy(addr(dest), addr(src), getAttrLen() + 6);
     }
 
     // get address of attribute of record #i
@@ -85,6 +95,14 @@ struct BPlusNode {
             *((int*)(page + offs)) = ch;
         }
         owner->bpm->markDirty(pageIndex);
+    }
+
+    // get last pointer using owner's fanOut (should be used in leaf only)
+    int lastPtr() const {
+        return child(owner->fanOut - 1);
+    }
+    void setLastPtr(int p) {
+        setChild(owner->fanOut - 1, p);
     }
 
     // return RID stored in rec #i
@@ -121,10 +139,13 @@ class BPlusTree {
         int fileId;
         int attrLen, fanOut;
         
+        int n, root;
         BPlusNode cur;
         function<bool(void*, void*)> cmp;
 
         void traceToLeaf(void*);
+
+
 };
 
 #endif
