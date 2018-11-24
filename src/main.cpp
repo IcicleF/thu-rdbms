@@ -1,5 +1,7 @@
 // This is currently just an example.
 
+#include "pf/bufmanager/BufPageManager.h"
+#include "pf/fileio/FileManager.h"
 #include "rm/rm_manager.h"
 #include "rm/rm_scanner.h"
 #include <iostream>
@@ -10,7 +12,10 @@ using namespace std;
 int main() {
     char dat[25];
 
-    RMManager manager;
+    FileManager *fm = new FileManager();
+    BufPageManager *bpm = new BufPageManager(fm);
+
+    RMManager manager(fm, bpm);
     manager.createFile("test.txt", 20);
     RMFile fh = manager.openFile("test.txt");
 
