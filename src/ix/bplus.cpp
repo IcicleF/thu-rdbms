@@ -100,6 +100,83 @@ bool BPlusTree::insertEntry(void* pData, const RID& rid) {
     }
 }
 
+void BPlusTree::deleteInnerNode(int pageId)
+{
+    if (pageId == root()) return;
+    BPlusNode tcur,fa,lsib,rsib;
+    tcur.owner = this;
+    tcur.id = pageId;
+    tcur.getPage();
+    if (tcur.count() >= fanOut/2 - 1) return;
+    int faid,fa_pos;
+    faid = tcur.parent();
+    fa_pos = tcur.parentPtr();
+    fa.owner = this;
+    fa.id = faid;
+    fa.getPage();
+    bool pl,pr;
+    pl = false;
+    pr = false;
+    if (fa_pos != 0){
+        lsib.pageId = fa.child(fa_pos - 1);
+        lsib.owner = this;
+        lsib.getPage();
+        if (lsib.count() >= fanOut/2) pl = true;
+    }
+    else{
+        rsib.pageId = fa.child(fa_pos + 1);
+        rsib.owner = this;
+        rsib.getPage();
+        if (rsib.count() >= fanOut/2) pr = true;
+    }
+
+    if (pl == true || pr == true){
+        if (pl == true){
+            for (int i = tcur.count() - 1; i >= 0 ; i--)tcur.setBlock(i+1, tcur.block(i));
+            for (int i = tcur.count(); i >= 0; i--)tcur.setChild(i+1, tcur.child(i));
+            tcur.setChild(0, lsib.child(lsib.count()));
+            tcur.setCount(tcur.count() + 1);
+            tcur.setBlock(0, fa.block(fa_pos - 1));
+            fa.setBlock(fa_pos - 1, lsib.block(lsib.count() - 1));
+            lsib.setCount(lsib.count() - 1);
+        }
+        else {
+            tcur.setBlock(tcur.count(), fa.block(fa_pos));
+            tcur.setChild(tcur.count() + 1, rsib.child(0));
+            tcur.setCount(tcus.count() + 1);
+            fa.setBlock(fa_pos, rsib.block(0));
+            for(int i = 0; i < rsib.count(); i++)rsib.setChild(i, rsib.child(i+1));
+            for(int i = 1; i < rsib.count(); i++)rsib.setBlock(i-1, rsib.block(i));
+            rsib.setCount(rsib.count() - 1);
+        }
+    }
+    else {
+        if (fa_pos != 0){
+            for(int i = tcur.count() - 1 ; i >= 0 ; i--)tcur.setBlock(i + lsib.count() + 1, tcur.block(i));
+            for(int i = tcur.count(); i >= 0 ; i--)tcur.setChild(i + lsib.count() + i, tcur.child(i));
+            for(int i = 0; i <= lsib.count(); i++)tcur.setChild(i, lsib.child(i));
+            for(int i = 0; i < lsib.count(); i++)tcur.setBlock(i, lsib.block(i));
+            tcur.setBlock(lsib.count(), fa.block(fa_pos - 1));
+            tcur.setCount(tcur.count() + lsib.count() + 1);
+            for(int i = fa_pos; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+            for(int i = fa_pos; i < fa.count(); i++)fa.setChild(i-1, fa.child(i));
+            fa.setCount(fa.count() - 1);
+            bpm->release(lsib.pageId);
+        }
+        else {
+            for(int i = 0; i < rsib.count(); i++)tcur.setBlock(tcur.count() + 1 + i, rsib.block(i));
+            for(int i = 0; i <= rsib.count(); i++)tcur.setChild(tcur.count() + 1 + i, rsib.child(i));
+            tcur.setBlock(tcur.count(), fa.block(fa_pos));
+            tcur.setCount(tcur.count() + rsib.count() + 1);
+            for(int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+            for(int i = fa_pos + 1; i < fa.count(); i++)fa.setChild(i-1, fa.child(i));
+            fa.setCount(fa.count() - 1);
+            bpm->release(rsib.pageId);  
+        }
+        deleteInnerNode(faid);
+    }
+}
+
 bool BPlusTree::deleteEntry(void *pData, const RID& rid) 
 {
     RID rs;
@@ -132,7 +209,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
             if (pos == 0) fa.setVal(fa_pos - 1, fa.val(1));
         }
 
-        if (l == fanOut/2 && cur.pageId != root()){
+        if (l == fanOut/2 - 1 && cur.pageId != root()){
             // 删除的特殊处理
             bool pl,pr;
             pl = false;
@@ -143,12 +220,12 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
             if (fa_pos > 0){
                 lsib.pageId = fa.child(fa_pos - 1);
                 lsib.getPage();
-                if (lsib.count() > fanOut/2)pl = true;
+                if (lsib.count() >= fanOut/2)pl = true;
             }
             if (fa_pos < l){
                 rsib.pageId = fa.child(fa_pos + 1);
                 rsib.getPage();
-                if (rsib.count() > fanOut/2)pr = true;
+                if (rsib.count() >= fanOut/2)pr = true;
             }
             if(pl == true || pr == true){
                 //直接由兄弟节点借
@@ -168,22 +245,26 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                 }
             }
             else{
+                //和兄弟节点合并，向父节点传递
                 if (fa_pos != 0){
                     cur.setCount(lsib.count() + cur.count());
                     for(int i = cur.count() - 1; i >= 0; i--)cur.setBlock(i + lsib.count(), cur.block(i));
                     for(int i = 0; i < lsib.count(); i++)cur.setBlock(i, lsib.block(i));
                     for(int i = fa_pos; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+                    for(int i = fa_pos; i < fa.count(); i++)fa.setChild(i-1, fa.child(i));
                     fa.setCount(fa.count() - 1);
                     bpm->release(lsib.pageId);
                 }
                 else{
-
+                    cur.setCount(rsib.count() + cur.count());
+                    for(int i = 0; i < rsib.count(); i++)cur.setBlock(i + cur.count(), rsib.block(i));
+                    for(int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+                    for(int i = fa_pos + 1; i < fa.count(); i++)fa.setChild(i-1, fa.child(i));
+                    fa.setCount(fa.count() - 1);
+                    bpm->release(rsib.pageId);
                 }
+                deleteInnerNode(faid);
             }
-
-        }
-        else{
-            //删除后不出现异常
         }
     }
 }

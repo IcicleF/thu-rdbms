@@ -132,7 +132,7 @@ class BPlusTree {
         bool searchEntry(void*, RID&);
         bool insertEntry(void*, const RID&);
         bool deleteEntry(void*, const RID&);
-
+        
     private:
         BufPageManager* bpm;
         int fileId;
@@ -155,7 +155,8 @@ class BPlusTree {
         function<bool(void*, void*)> cmp;
 
         void traceToLeaf(void*);
-    
+        void deleteInnerNode(int);
+
 };
 
 #endif
