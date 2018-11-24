@@ -1,2 +1,0 @@
-/usr/bin/ar qc libdbrm.a  CMakeFiles/dbrm.dir/rm_file.cpp.o CMakeFiles/dbrm.dir/rm_manager.cpp.o CMakeFiles/dbrm.dir/rm_record.cpp.o CMakeFiles/dbrm.dir/rm_scanner.cpp.o
-/usr/bin/ranlib libdbrm.a

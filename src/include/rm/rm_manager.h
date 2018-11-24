@@ -16,7 +16,6 @@ class RMManager {
         ~RMManager();
         
         void createFile(const char*, int);
-        void destroyFile(const char*);
         RMFile openFile(const char*);
         void closeFile(RMFile&);
 };
