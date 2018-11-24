@@ -12,16 +12,16 @@
 class RID {
     public:
         RID();
-        RID(int page, int slot);
+        RID(int page, short slot);
         RID(const RID&);
         ~RID();
         
         int getPage() const;
-        int getSlot() const;
+        short getSlot() const;
 
     private:
         int page;       // page ID
-        int slot;       // offset (bytes)
+        short slot;       // offset (bytes)
 };
 
 #endif
