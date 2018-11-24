@@ -58,13 +58,12 @@ struct BPlusNode {
     }
 
     // get address of combinition of record #i
-    void* addr(int i) {
+    void* block(int i) {
         return val(i) - 6;
     }
-
-    // copy attrLen + 6 bytes from addr(src) to addr(dest)
-    void copy(int dest, int src) {
-        memcpy(addr(dest), addr(src), getAttrLen() + 6);
+    void setBlock(int i, void* pbData) {
+        memcpy(block(i), pbData, getAttrLen() + 6);
+        owner->bpm->markDirty(pageIndex);
     }
 
     // get address of attribute of record #i
@@ -138,14 +137,25 @@ class BPlusTree {
         BufPageManager* bpm;
         int fileId;
         int attrLen, fanOut;
+
+        BufType p0;
+        int p0Index;
+        int nodeNum() { return p0[2]; }
+        int root() { return p0[3]; }
+        void setNodeNum(int nn) {
+            p0[2] = nn;
+            bpm->markDirty(p0Index);
+        }
+        void setRoot(int r) {
+            p0[3] = r;
+            bpm->markDirty(p0Index);
+        }
         
-        int n, root;
         BPlusNode cur;
         function<bool(void*, void*)> cmp;
 
         void traceToLeaf(void*);
-
-
+    
 };
 
 #endif

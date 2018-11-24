@@ -10,12 +10,11 @@ BPlusTree::BPlusTree(BufPageManager* bpm, int fileId) {
     this->bpm = bpm;
     this->fileId = fileId;
 
-    int pageIndex;
-    BufType p0 = bpm->getPage(fileId, 0, pageIndex);
+    p0 = bpm->getPage(fileId, 0, p0Index);
     this->attrLen = p0[0];
-    n = p0[2];
-    root = p0[3];
     fanOut = (PAGE_SIZE - 16) / (attrLen + 6) + 1;
+    if (fanOut & 1)
+        fanOut -= 1;        // force even
     cur.owner = this;
 }
 
@@ -25,7 +24,7 @@ BPlusTree::~BPlusTree() {
 
 void BPlusTree::traceToLeaf(void *pData) {
     // set cur as root
-    cur.pageId = root;
+    cur.pageId = root();
     cur.getPage();
 
     while (cur.type() != BT_LEAF) {
@@ -64,8 +63,27 @@ bool BPlusTree::insertEntry(void* pData, const RID& rid) {
     int l = cur.count();
     if (l + 1 == fanOut) {
         // 叶子已满，分裂并调用 insertInner
-        // 在这个时候叶子中有 fanOut - 1 条记录，再加一条新增的
-        // 
+        // 在这个时候叶子中有 fanOut - 1 条记录，再加一条新增的合计 fanOut 条
+        // 由于 fanOut 是偶数，因此直接对半分
+
+        // 1. new node
+        int n = nodeNum();
+        setNodeNum(++n);
+
+        BPlusNode nv(n);
+        nv.owner = this;
+        nv.getPage();
+
+        // 2. write metadata
+        nv.setCount(fanOut / 2);
+        nv.setType(BT_LEAF);
+        nv.setParent(cur.parent());
+        nv.setParentPtr(0);             // todo
+
+        // 3. copy data
+        for (int i = 0, j = 0; i < fanOut / 2; ++i) {
+            
+        }
     }
     else {
         int pos = 0;        // pos 代表 pData 应该在的位置
@@ -76,7 +94,7 @@ bool BPlusTree::insertEntry(void* pData, const RID& rid) {
                     break;
                 }
         for (int j = l; j > pos; --j)
-            cur.copy(j, j - 1);
+            cur.setBlock(j, cur.block(j - 1));
         cur.setVal(pos, pData);
         cur.setRec(pos, rid);
     }
@@ -84,8 +102,7 @@ bool BPlusTree::insertEntry(void* pData, const RID& rid) {
 
 bool BPlusTree::deleteEntry(void *pData, const RID& rid) 
 {
-    int l;
-    Rid rs;
+    RID rs;
     if(!searchEntry(pData, rs)){
         return false;
     }
