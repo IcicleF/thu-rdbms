@@ -4,7 +4,7 @@ RID::RID() {
     page = slot = -1;
 }
 
-RID::RID(int page, int slot) {
+RID::RID(int page, short slot) {
     this->page = page;
     this->slot = slot;
 }
@@ -22,6 +22,6 @@ int RID::getPage() const {
     return this->page;
 }
 
-int RID::getSlot() const {
+short RID::getSlot() const {
     return this->slot;
 }
