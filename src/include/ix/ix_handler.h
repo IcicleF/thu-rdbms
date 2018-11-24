@@ -7,9 +7,10 @@
 
 class IXHandler {
     public:
+        AttrType attrtype;
         BPlusTree *bpt;
 
-        IXHandler(BPlusTree *bpt);
+        IXHandler(BPlusTree *bpt, AttrType attrtype);
         IXHandler();
         ~IXHandler();
         int insertEntry(void*, const RID&);

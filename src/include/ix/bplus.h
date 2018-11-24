@@ -109,11 +109,12 @@ class BPlusTree {
 
     public:
         BPlusTree();
-        BPlusTree(BufPageManager*, int, int);
+        BPlusTree(BufPageManager*, int);
         ~BPlusTree();
 
         bool searchEntry(void*, RID&);
         bool insertEntry(void*, const RID&);
+        bool deleteEntry(void*, const RID&);
 
     private:
         BufPageManager* bpm;

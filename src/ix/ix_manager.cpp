@@ -26,6 +26,8 @@ int IXManager::createIndex(const char *fileName, int indexNo, AttrType attrtype,
     {
         b[0] = attrLength;
         b[1] = attrtype;
+        b[2] = 0;//num of node
+        b[3] = 1;
         //init
     }
 }
@@ -53,8 +55,8 @@ IXHandler* IXManager::openIndex(const char *fileName, int indexNo)
     b = bpm->getPage(fileId, 0, index);
 
     BPlusTree *bpt;
-    bpt = new BPlusTree(this->bpm, fileId, b[0]);
-    IXHandler *ih = new IXHandler(bpt);
+    bpt = new BPlusTree(this->bpm, fileId);
+    IXHandler *ih = new IXHandler(bpt, b[1]);
     return ih;
 }
 

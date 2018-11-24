@@ -30,7 +30,7 @@ void BPlusTree::traceToLeaf(void *pData) {
             int l = cur.count();
             for (int i = l - 1; i >= 0; --i)
                 if (cmp(pData, cur.val(i)) >= 0) {
-                    cur.pageId = cur.child(i);
+                    cur.pageId = cur.child(i+1);
                     break;
                 }
         }
@@ -57,6 +57,17 @@ bool BPlusTree::searchEntry(void* pData, RID& rid) {
 bool BPlusTree::insertEntry(void* pData, const RID& rid) {
     traceToLeaf(pData);
     while (cur.count() + 1 == fanOut) {
+        
+    }
+}
+
+bool BPlusTree::deleteEntry(void *pData, const RID& rid) 
+{
+    Rid rs;
+    if(!searchEntry(pData, rs)){
+        return false;
+    }
+    else{
         
     }
 }
