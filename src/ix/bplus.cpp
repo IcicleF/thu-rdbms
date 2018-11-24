@@ -84,11 +84,33 @@ bool BPlusTree::insertEntry(void* pData, const RID& rid) {
 
 bool BPlusTree::deleteEntry(void *pData, const RID& rid) 
 {
+    int l;
     Rid rs;
     if(!searchEntry(pData, rs)){
         return false;
     }
     else{
-        
+        l = cur.count();
+        if (l == fanOut/2){
+            // 删除的特殊处理
+        }
+        else{
+            int pos = 0;
+            for (int i = 0 ; i < l ; i++){
+                if (cmp(pData, cur.val(i)) == 0){
+                    pos = i;
+                    break;
+                }
+            }
+            if (pos == 0){
+                int faid = cur.parent();
+                int faord = cur.parentPtr();
+                cur.pageID = faid;
+                cur.getPage();
+                
+            }
+            for (int i = pos + 1; i < l; i++)cur.copy(i, i+1);
+            cur.setCount(l - 1);
+        }
     }
 }

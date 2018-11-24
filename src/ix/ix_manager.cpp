@@ -23,13 +23,15 @@ int IXManager::createIndex(const char *fileName, int indexNo, AttrType attrtype,
     fm->createFile(finalfn);
     fm->openFile(finalfn, fileId);
     b = bpm->allocPage(fileId, 0, index, false);
-    {
-        b[0] = attrLength;
-        b[1] = attrtype;
-        b[2] = 0;//num of node
-        b[3] = 1;
-        //init
-    }
+    b[0] = attrLength;
+    b[1] = attrtype;
+    b[2] = 1;//num of node
+    b[3] = 1;
+    //init
+    bpm->markDirty(index);
+    b = bpm->allocPage(fileId, 1, index, false);
+    b[0] = 32;
+    bpm->markDirty(index);
 }
 
 IXHandler* IXManager::openIndex(const char *fileName, int indexNo)
