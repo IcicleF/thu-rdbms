@@ -238,14 +238,14 @@ void BPlusTree::deleteInnerNode(int pageId)
     if (pageId == root()) return;
     BPlusNode tcur,fa,lsib,rsib;
     tcur.owner = this;
-    tcur.id = pageId;
+    tcur.pageId = pageId;
     tcur.getPage();
     if (tcur.count() >= fanOut/2 - 1) return;
     int faid,fa_pos;
     faid = tcur.parent();
     fa_pos = tcur.parentPtr();
     fa.owner = this;
-    fa.id = faid;
+    fa.pageId = faid;
     fa.getPage();
     bool pl,pr;
     pl = false;
@@ -276,7 +276,7 @@ void BPlusTree::deleteInnerNode(int pageId)
         else {
             tcur.setBlock(tcur.count(), fa.block(fa_pos));
             tcur.setChild(tcur.count() + 1, rsib.child(0));
-            tcur.setCount(tcus.count() + 1);
+            tcur.setCount(tcur.count() + 1);
             fa.setBlock(fa_pos, rsib.block(0));
             for(int i = 0; i < rsib.count(); i++)rsib.setChild(i, rsib.child(i+1));
             for(int i = 1; i < rsib.count(); i++)rsib.setBlock(i-1, rsib.block(i));
