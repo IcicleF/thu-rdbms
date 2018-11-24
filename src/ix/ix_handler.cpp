@@ -35,7 +35,7 @@ IXHandler::IXHandler(BPlusTree *bpt, AttrType attrtype)
             else if(as == bs)return 0;
             else return 1;
         }
-    }
+    };
     bpt->cmp = z;
 }
 

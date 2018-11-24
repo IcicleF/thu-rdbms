@@ -4,6 +4,7 @@
 #include "errs.h"
 #include "rid.h"
 #include "ix/bplus.h"
+#include "rm/rm_scanner.h"
 
 class IXHandler {
     public:

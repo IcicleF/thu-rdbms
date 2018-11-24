@@ -8,8 +8,7 @@
     * 2 Byte：节点属性
     * 4 Byte：父结点
     * 2 Byte：父结点的第几个指针
-    * 6 Byte：最左指针域
-    * 之后每条记录 `attrLen + 6` Byte，存放 attr (`attrLen` Byte) 和一个指针域
+    * 之后 (p0 = 6) (v0 = attrLen) (p1 = 6) (v1 = attrLen) ... (vk = attrLen) (p(k+1) = 6)
 
 attrLen、attrType、总的节点数、根节点编号 顺序放在 page #0，每个 4 Bytes
 
