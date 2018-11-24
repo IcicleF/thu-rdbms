@@ -15,9 +15,6 @@
 #define PREV(x) ((ushort*)(x + recSize))
 #define NEXT(x) (PREV(x) + 1)
 
-typedef ushort* ShortBufType;
-typedef uchar* CharBufType;
-
 class RMFile {
     public:
         int fileId;

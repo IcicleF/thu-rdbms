@@ -49,6 +49,9 @@ typedef unsigned int uint;
 typedef unsigned short ushort;
 typedef unsigned char uchar;
 
+typedef ushort* ShortBufType;
+typedef uchar* CharBufType;
+
 typedef unsigned long long ull;
 typedef long long ll;
 typedef double db;
