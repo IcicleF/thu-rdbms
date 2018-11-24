@@ -107,27 +107,83 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
         return false;
     }
     else{
-        l = cur.count();
-        if (l == fanOut/2){
-            // 删除的特殊处理
+        int l,faid,fa_pos;
+        if (cur.pageId != root()){
+            faid = cur.parent();
+            fa_pos = cur.parentPtr();
         }
-        else{
-            int pos = 0;
-            for (int i = 0 ; i < l ; i++){
-                if (cmp(pData, cur.val(i)) == 0){
-                    pos = i;
-                    break;
+        l = cur.count();
+
+        //删除操作
+        int pos = 0;
+        for (int i = 0 ; i < l ; i++){
+            if (cmp(pData, cur.val(i)) == 0){
+                pos = i;
+                break;
+            }
+        }
+        for (int i = pos + 1; i < l; i++)cur.setBlock(i, cur.block(i+1));
+        cur.setCount(l - 1);
+        BPlusNode fa;
+        if (cur.pageId != root()){
+            fa.pageId = faid;
+            fa.owner = this;
+            fa.getPage();
+            if (pos == 0) fa.setVal(fa_pos - 1, fa.val(1));
+        }
+
+        if (l == fanOut/2 && cur.pageId != root()){
+            // 删除的特殊处理
+            bool pl,pr;
+            pl = false;
+            pr = false;
+            BPlusNode lsib,rsib;
+            lsib.owner = this;
+            rsib.owner = this;
+            if (fa_pos > 0){
+                lsib.pageId = fa.child(fa_pos - 1);
+                lsib.getPage();
+                if (lsib.count() > fanOut/2)pl = true;
+            }
+            if (fa_pos < l){
+                rsib.pageId = fa.child(fa_pos + 1);
+                rsib.getPage();
+                if (rsib.count() > fanOut/2)pr = true;
+            }
+            if(pl == true || pr == true){
+                //直接由兄弟节点借
+                if (pl == true){
+                    fa.setVal(fa_pos - 1, lsib.val(lsib.count() - 1));
+                    cur.setCount(l+1);
+                    for(int i = l - 1; i >= 0; i--)cur.setBlock(i+1, cur.block(i));
+                    cur.setBlock(0, lsib.block(lsib.count()-1));
+                    lsib.setCount(lsib.count() - 1);
+                }
+                else{
+                    fa.setVal(fa_pos, rsib.val(1));
+                    cur.setCount(l+1);
+                    cur.setBlock(l+1, rsib.block(0));
+                    for(int i = 1; i < rsib.count(); i++)rsib.setBlock(i - 1, rsib.block(i));
+                    rsib.setCount(rsib.count() - 1);
                 }
             }
-            if (pos == 0){
-                int faid = cur.parent();
-                int faord = cur.parentPtr();
-                cur.pageID = faid;
-                cur.getPage();
-                
+            else{
+                if (fa_pos != 0){
+                    cur.setCount(lsib.count() + cur.count());
+                    for(int i = cur.count() - 1; i >= 0; i--)cur.setBlock(i + lsib.count(), cur.block(i));
+                    for(int i = 0; i < lsib.count(); i++)cur.setBlock(i, lsib.block(i));
+                    for(int i = fa_pos; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+                    fa.setCount(fa.count() - 1);
+                    bpm->release(lsib.pageId);
+                }
+                else{
+
+                }
             }
-            for (int i = pos + 1; i < l; i++)cur.copy(i, i+1);
-            cur.setCount(l - 1);
+
+        }
+        else{
+            //删除后不出现异常
         }
     }
 }

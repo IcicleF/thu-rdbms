@@ -51,14 +51,14 @@ IXHandler* IXManager::openIndex(const char *fileName, int indexNo)
     int fileId;
     if( !(fm->openFile(finalfn, fileId)) ) {
         //error
-        return;
+        return NULL;
     }
 
     b = bpm->getPage(fileId, 0, index);
 
     BPlusTree *bpt;
     bpt = new BPlusTree(this->bpm, fileId);
-    IXHandler *ih = new IXHandler(bpt, b[1]);
+    IXHandler *ih = new IXHandler(bpt, (AttrType)b[1]);
     return ih;
 }
 
