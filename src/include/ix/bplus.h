@@ -58,13 +58,12 @@ struct BPlusNode {
     }
 
     // get address of combinition of record #i
-    void* addr(int i) {
+    void* block(int i) {
         return val(i) - 6;
     }
-
-    // copy attrLen + 6 bytes from addr(src) to addr(dest)
-    void copy(int dest, int src) {
-        memcpy(addr(dest), addr(src), getAttrLen() + 6);
+    void setBlock(int i, void* pbData) {
+        memcpy(block(i), pbData, getAttrLen() + 6);
+        owner->bpm->markDirty(pageIndex);
     }
 
     // get address of attribute of record #i
