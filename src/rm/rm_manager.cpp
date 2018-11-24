@@ -7,6 +7,12 @@ RMManager::RMManager()
     bpm = new BufPageManager(fm);
 }
 
+RMManager::RMManager(FileManager *fm, BufPageManager *bpm)
+{
+    this->fm = fm;
+    this->bpm = bpm;
+}
+
 RMManager::~RMManager()
 {
     bpm -> close();

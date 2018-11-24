@@ -12,6 +12,7 @@ class RMManager {
         BufPageManager *bpm;
     public:
         RMManager();
+        RMManager(FileManager *fm, BufPageManager *bpm);
         ~RMManager();
         
         void createFile(const char*, int);
