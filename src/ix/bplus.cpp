@@ -56,5 +56,7 @@ bool BPlusTree::searchEntry(void* pData, RID& rid) {
 
 bool BPlusTree::insertEntry(void* pData, const RID& rid) {
     traceToLeaf(pData);
-    insertToCur(pData);
+    while (cur.count() + 1 == fanOut) {
+        
+    }
 }
