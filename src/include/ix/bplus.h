@@ -46,6 +46,7 @@ class BPlusTree {
         void traceToLeaf(void*);
         void insertInner(void*, int);
         void makeRoot(void*, int, int);
+        void deleteInnerNode(int);
 };
 
 #endif
