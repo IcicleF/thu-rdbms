@@ -11,7 +11,7 @@
     * 6 Byte：最左指针域
     * 之后每条记录 `attrLen + 6` Byte，存放 attr (`attrLen` Byte) 和一个指针域
 
-attrLen、总的节点数、根节点编号 顺序放在 page #0，每个 4 Bytes
+attrLen、attrType、总的节点数、根节点编号 顺序放在 page #0，每个 4 Bytes
 
 root node 放在 page #1
 

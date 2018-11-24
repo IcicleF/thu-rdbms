@@ -138,14 +138,25 @@ class BPlusTree {
         BufPageManager* bpm;
         int fileId;
         int attrLen, fanOut;
+
+        BufType p0;
+        int p0Index;
+        int nodeNum() { return p0[2]; }
+        int root() { return p0[3]; }
+        void setNodeNum(int nn) {
+            p0[2] = nn;
+            bpm->markDirty(p0Index);
+        }
+        void setRoot(int r) {
+            p0[3] = r;
+            bpm->markDirty(p0Index);
+        }
         
-        int n, root;
         BPlusNode cur;
         function<bool(void*, void*)> cmp;
 
         void traceToLeaf(void*);
-
-
+    
 };
 
 #endif
