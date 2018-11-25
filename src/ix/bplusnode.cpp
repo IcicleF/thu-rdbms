@@ -6,6 +6,10 @@ using namespace std;
 void BPlusNode::getPage() {
     page = (CharBufType)owner->bpm->getPage(owner->fileId, pageId, pageIndex);
 }
+void BPlusNode::clear() {
+    memset(page + 10, 0, PAGE_SIZE - 10);
+    owner->bpm->markDirty(pageIndex);
+}
 
 int BPlusNode::getAttrLen() const { 
     return owner->attrLen;
@@ -48,6 +52,10 @@ void* BPlusNode::block(int i) {
 }
 void BPlusNode::setBlock(int i, void* pbData) {
     memcpy(block(i), pbData, getAttrLen() + 6);
+    owner->bpm->markDirty(pageIndex);
+}
+void BPlusNode::clearBlock(int i) {
+    memset(block(i), 0, getAttrLen() + 6);
     owner->bpm->markDirty(pageIndex);
 }
 

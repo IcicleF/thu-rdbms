@@ -4,16 +4,15 @@
 #include "pf/fileio/FileManager.h"
 #include "rm/rm_manager.h"
 #include "rm/rm_scanner.h"
+#include "ix/ix_manager.h"
+#include "ix/ix_handler.h"
 #include <iostream>
 #include <cstring>
 
 using namespace std;
 
-int main() {
+void test1(FileManager* fm, BufPageManager* bpm) {
     char dat[25];
-
-    FileManager *fm = new FileManager();
-    BufPageManager *bpm = new BufPageManager(fm);
 
     RMManager manager(fm, bpm);
     manager.createFile("test.txt", 20);
@@ -48,15 +47,52 @@ int main() {
     RMRecord rec;
 
     sc.nextRec(rec);
-
     sc.openScan(fh, STRING, 5, 10, ST_LE, (void *)val);
-
     while (sc.nextRec(rec)) {
         rec.getData(dat);
         cout << "Dat="<< dat << endl;
         //cin >> dat;
     }
-
     cout << "fin" << endl;
+}
+
+void test2(FileManager* fm, BufPageManager* bpm) {
+    IXManager ixmgr(fm, bpm);
+    ixmgr.createIndex("temp", 0, STRING, 4);
+    IXHandler* ih = ixmgr.openIndex("temp", 0);
+
+    cout << "success: build ih instance" << endl;
+
+    auto inse = [&](const char* s, int page, short slot) -> void {
+        ih->insertEntry((void*)s, RID(page, slot));
+    };
+    inse("abcd", 10, 343);
+    cout << "success: 1" << endl;
+
+    inse("01z", 4, 239);
+    cout << "success: 2" << endl;
+
+    inse("0", 122349, 16);
+    cout << "success: 3" << endl;
+    
+    inse("2122", 212, 44);
+    cout << "success: 4" << endl;
+
+    inse("abzz", 2, 1349);
+    cout << "success: 5" << endl;
+
+    inse("wsgi", 23, 16);
+    cout << "success: 6" << endl;
+
+    ih->bpt->printTree();
+}
+
+int main() {
+    FileManager *fm = new FileManager();
+    BufPageManager *bpm = new BufPageManager(fm);
+
+    // test1(fm, bpm);
+    test2(fm, bpm);
+    
     return 0;
 }

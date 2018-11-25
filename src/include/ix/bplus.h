@@ -10,7 +10,7 @@ class BPlusTree {
     friend struct BPlusNode;
 
     public:
-        function<bool(void*, void*)> cmp;
+        function<int(void*, void*)> cmp;
 
     public:
         BPlusTree();

@@ -2,27 +2,13 @@
 #define RM_SCANNER_H
 
 #include "rid.h"
+#include "scanner.h"
 #include "rm/rm_record.h"
 #include "rm/rm_file.h"
 #include "pf/bufmanager/BufPageManager.h"
 #include "pf/fileio/FileManager.h"
 #include "pf/utils/pagedef.h"
-#include<vector>
-
-enum AttrType {
-    INTEGER,
-    FLOAT,
-    STRING
-};
-enum ScanType {
-    ST_EQ,
-    ST_LT,
-    ST_GT,
-    ST_LE,
-    ST_GE,
-    ST_NE,
-    ST_NOP
-};
+#include <vector>
 
 class RMScanner {
     public:

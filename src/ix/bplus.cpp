@@ -67,7 +67,9 @@ bool BPlusTree::searchEntry(void* pData, RID& rid) {
 void BPlusTree::insertEntry(void* pData, const RID& rid) {
     traceToLeaf(pData);
     int l = cur.count();
-    if (l + 1 == fanOut) {
+    if (l + 1 == fanOut) {      // node is full
+        cout << "  insertEntry: full! need to split" << endl;
+        // build oversized node
         CharBufType tbuf = new uchar[(attrLen + 6) * fanOut + 5];
         for (int i = 0, j = 0; i < fanOut; ++i) {
             int offs = (attrLen + 6) * i;
@@ -88,8 +90,8 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
         nv.getPage();
         nv.setCount(fanOut / 2);
         nv.setType(BT_LEAF);
-        nv.setParentPtr(0);             // todo!
 
+        cur.clear();
         cur.setCount(fanOut / 2);
 
         for (int i = 0; i < fanOut / 2; ++i)
@@ -98,6 +100,7 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
             cur.setBlock(i, tbuf + (attrLen + 6) * (i + fanOut / 2));
         delete[] tbuf;
 
+        // copy that key to parent
         CharBufType nextkey = new uchar[attrLen + 5];
         memcpy(nextkey, cur.val(0), attrLen);        
         assert((cur.parent() == 0) == (root() == cur.pageId));
@@ -115,17 +118,22 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
         delete[] nextkey;
     }
     else {
+        cout << "  insertEntry: not full leaf" << endl;
         int pos = 0;        // pos 代表 pData 应该在的位置
         if (l > 0) {
             if (cmp(pData, cur.val(0)) >= 0)
-                for (int j = l - 1; j >= 0; --j)
+                for (int j = l - 1; j >= 0; --j) {
+                    cout << j << ": ";
                     if (cmp(pData, cur.val(j)) >= 0) {
                         pos = j + 1;
                         break;
                     }
+                }
+            cout << "  insertEntry: found pos = " << pos << endl;
             for (int j = l; j > pos; --j)
                 cur.setBlock(j, cur.block(j - 1));
         }
+        cur.clearBlock(pos);
         cur.setVal(pos, pData);
         cur.setRec(pos, rid);
         cur.setCount(cur.count() + 1);
@@ -137,7 +145,8 @@ void BPlusTree::insertInner(void* pData, int pageId) {
     assert(cur.type() == BT_INNER);
 
     int l = cur.count();
-    if (l + 1 == fanOut) {
+    if (l + 1 == fanOut) {      // node is full
+        // build oversized node (ptr data separated)
         int* ptrs = new int[fanOut + 5];
         CharBufType tbuf = new uchar[attrLen * fanOut + 5];
         for (int i = 0, j = 0; i < fanOut; ++i) {
@@ -161,8 +170,8 @@ void BPlusTree::insertInner(void* pData, int pageId) {
         nv.getPage();
         nv.setCount(fanOut / 2);
         nv.setType(BT_INNER);
-        nv.setParentPtr(0);             // todo!
 
+        cur.clear();
         cur.setCount(fanOut / 2 - 1);
 
         for (int i = 0; i < fanOut / 2; ++i) {
@@ -177,6 +186,7 @@ void BPlusTree::insertInner(void* pData, int pageId) {
         }
         cur.setChild(fanOut / 2 - 1, ptrs[fanOut]);
 
+        // raise that key to parent
         CharBufType nextkey = new uchar[attrLen + 5];
         memcpy(nextkey, tbuf + attrLen * (fanOut / 2), attrLen); 
 
@@ -208,6 +218,7 @@ void BPlusTree::insertInner(void* pData, int pageId) {
         cur.setChild(l + 1, cur.child(l));
         for (int j = l; j > pos; --j)
             cur.setBlock(j, cur.block(j - 1));
+        cur.clearBlock(pos);
         cur.setVal(pos, pData);
         cur.setChild(pos, pageId);
         cur.setCount(cur.count() + 1);
@@ -400,6 +411,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
             }
         }
     }
+    return true;
 }
 
 void BPlusTree::printTree() {
@@ -428,30 +440,30 @@ void BPlusTree::printTree() {
             cout << v.parent() << endl;
 
         cout << " Records:" << endl;
-        if (v.type() == BT_INNER)
+        if (v.type() == BT_LEAF)
             for (int i = 0; i < l; ++i) {
                 RID rid = v.rec(i);
-                cout << "   Pointer: Page #" << rid.getPage() << ", Slot #" << rid.getSlot() << endl;
+                cout << "   Pointer: Page #" << dec << rid.getPage() << ", Slot #" << rid.getSlot() << endl;
                 cout << "   Rec: ";
 
                 uchar* base = (uchar*)v.val(i);
                 for (int j = 0; j < attrLen; ++j)
-                    cout << hex << (int)(*(base + j)) << " ";
+                    cout << "0x" << hex << (int)(*(base + j)) << " ";
                 cout << endl;
             }
         else {
             for (int i = 0; i < l; ++i) {
                 RID rid = v.rec(i);
-                cout << "   Pointer: Page #" << v.child(i);
+                cout << "   Pointer: Page #" << v.child(i) << endl;
                 cout << "   Rec: ";
 
                 uchar* base = (uchar*)v.val(i);
                 for (int j = 0; j < attrLen; ++j)
-                    cout << hex << (int)(*(base + j)) << " ";
+                    cout << "0x" << hex << (int)(*(base + j)) << " ";
                 cout << endl;
                 Q.push(v.child(i));
             }
-            cout << "   Pointer: Page #" << v.child(l);
+            cout << "   Pointer: Page #" << v.child(l) << endl;
             Q.push(v.child(l));
         }
         cout << endl;

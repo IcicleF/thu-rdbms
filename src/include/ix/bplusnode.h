@@ -21,6 +21,7 @@ struct BPlusNode {
 
     // load page from current pageId
     void getPage();
+    void clear();
 
     // access attrLen from owner
     int getAttrLen() const;
@@ -44,6 +45,7 @@ struct BPlusNode {
     // access address of combinition of record #i
     void* block(int i);
     void setBlock(int i, void* pbData);
+    void clearBlock(int i);
 
     // access address of attribute of record #i
     void* val(int i) const;

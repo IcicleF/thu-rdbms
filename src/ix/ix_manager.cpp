@@ -6,6 +6,10 @@ IXManager::IXManager(FileManager *fm, BufPageManager *bpm)
     this->bpm = bpm;
 }
 
+IXManager::~IXManager() {
+    // Nothing special.
+}
+
 int IXManager::createIndex(const char *fileName, int indexNo, AttrType attrtype, int attrLength)
 {
     string ss;
@@ -30,8 +34,10 @@ int IXManager::createIndex(const char *fileName, int indexNo, AttrType attrtype,
     //init
     bpm->markDirty(index);
     b = bpm->allocPage(fileId, 1, index, false);
-    b[0] = 32;
+    b[0] = 0x00020000;
     bpm->markDirty(index);
+    bpm->writeBack(index);
+    return 0;
 }
 
 IXHandler* IXManager::openIndex(const char *fileName, int indexNo)
@@ -58,11 +64,11 @@ IXHandler* IXManager::openIndex(const char *fileName, int indexNo)
 
     BPlusTree *bpt;
     bpt = new BPlusTree(this->bpm, fileId);
-    IXHandler *ih = new IXHandler(bpt, (AttrType)b[1]);
+    IXHandler *ih = new IXHandler(bpt, (AttrType)b[1], (int)b[0]);
     return ih;
 }
 
 int IXManager::closeIndex(IXHandler &ih)
 {
-
+    return 0;
 }

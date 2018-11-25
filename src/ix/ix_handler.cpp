@@ -1,25 +1,26 @@
 #include "ix/ix_handler.h"
+#include <iostream>
+#include <cstring>
+
+using namespace std;
 
 IXHandler::IXHandler()
 {
 
 }
 
-IXHandler::IXHandler(BPlusTree *bpt, AttrType attrtype)
+IXHandler::IXHandler(BPlusTree *bpt, AttrType attrtype, int attrlen)
 {
     int ai,bi;
     float af,bf;
-    string as,bs;
 
     this->bpt = bpt;
     this->attrtype = attrtype;
-    auto z = [&] (void *a, void *b) -> bool {
+    bpt->cmp = [&] (void *a, void *b) -> int {
         if (attrtype == INTEGER){
             ai = atoi((char *)a);
             bi = atoi((char *)b);
-            if(ai < bi)return -1;
-            else if(ai == bi)return 0;
-            else return 1;
+            return ai - bi;
         }
         else if(attrtype == FLOAT){
             af = atof((char *)a);
@@ -29,17 +30,21 @@ IXHandler::IXHandler(BPlusTree *bpt, AttrType attrtype)
             else return 1;
         }
         else{
-            as = (char *)a;
-            bs = (char *)b;
-            if(as < bs)return -1;
-            else if(as == bs)return 0;
-            else return 1;
+            return strncmp((char*)a, (char*)b, attrlen);
         }
     };
-    bpt->cmp = z;
 }
 
 IXHandler::~IXHandler()
 {
     delete this->bpt;
+}
+
+int IXHandler::insertEntry(void* pData, const RID& rid) {
+    bpt->insertEntry(pData, rid);
+    return 0;
+}
+
+int IXHandler::deleteEntry(void* pData, const RID& rid) {
+    return bpt->deleteEntry(pData, rid);
 }
