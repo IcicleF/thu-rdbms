@@ -70,20 +70,12 @@ void BPlusNode::setVal(int i, void* pData) {
 }
 
 int BPlusNode::child(int i) const {
-    if (i == 0)
-        return ipage[2];
-    else {
-        int offs = 10 + (getAttrLen() + 6) * i;
-        return *((int*)(page + offs));
-    }
+    int offs = 10 + (getAttrLen() + 6) * i;
+    return *((int*)(page + offs));
 }
 void BPlusNode::setChild(int i, int ch) {
-    if (i == 0)
-        ipage[2] = ch;
-    else {
-        int offs = 10 + (getAttrLen() + 6) * i;
-        *((int*)(page + offs)) = ch;
-    }
+    int offs = 10 + (getAttrLen() + 6) * i;
+    *((int*)(page + offs)) = ch;
     owner->bpm->markDirty(pageIndex);
 }
 
