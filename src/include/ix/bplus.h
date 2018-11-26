@@ -6,11 +6,14 @@
 
 const short BT_INNER = 1, BT_LEAF = 2;
 
+class IXScanner;
+
 class BPlusTree {
     friend struct BPlusNode;
+    friend class IXScanner;
 
     public:
-        function<int(void*, void*)> cmp;
+        std::function<int(void*, void*)> cmp;
 
     public:
         BPlusTree();
