@@ -6,11 +6,14 @@
 #include "scanner.h"
 #include "ix/bplus.h"
 
+#include <string>
+
 class IXHandler {
     public:
         AttrType attrtype;
         BPlusTree *bpt;
         int attrlen;
+        std::string fileName;
 
         IXHandler(BPlusTree *bpt, AttrType attrtype, int attrlen);
         IXHandler();

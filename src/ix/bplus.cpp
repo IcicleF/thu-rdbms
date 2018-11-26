@@ -2,7 +2,6 @@
 #include <cassert>
 #include <queue>
 #include <iostream>
-#include <iomanip>
 
 using namespace std;
 
@@ -73,7 +72,7 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
     int l = cur.count();
     int par = cur.parent();
     if (l + 1 == fanOut) {      // node is full
-        cout << "  insertEntry: full! need to split" << endl;
+        //cout << "  insertEntry: full! need to split" << endl;
         // build oversized node
         CharBufType tbuf = new uchar[(attrLen + 6) * fanOut + 5];
         memset(tbuf, 0, (attrLen + 6) * fanOut + 5);
@@ -135,7 +134,7 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
         delete[] nextkey;
     }
     else {
-        cout << "  insertEntry: not full leaf" << endl;
+        //cout << "  insertEntry: not full leaf" << endl;
         int pos = 0;        // pos 代表 pData 应该在的位置
         if (l > 0) {
             if (cmp(pData, cur.val(0)) >= 0)
@@ -145,7 +144,7 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
                         break;
                     }
                 }
-            cout << "  insertEntry: found pos = " << pos << endl;
+            //cout << "  insertEntry: found pos = " << pos << endl;
             for (int j = l; j > pos; --j)
                 cur.setBlock(j, cur.block(j - 1));
         }
@@ -157,37 +156,43 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
 
 // insert at cur, cur must be inner node
 void BPlusTree::insertInner(void* pData, int pageId) {
-    cout << "  insertInner: " << (char*)pData << " " << pageId << endl;
-
     assert(cur.type() == BT_INNER);
     int l = cur.count();
     int par = cur.parent();
     if (l + 1 == fanOut) {      // node is full
+        //cout << "  insertInner: start split" << endl;
         // build oversized node (ptr data separated)
         int* ptrs = new int[fanOut + 5];
         CharBufType tbuf = new uchar[attrLen * fanOut + 5];
         memset(tbuf, 0, attrLen * fanOut + 5);
         ptrs[0] = cur.child(0);
-        for (int i = 1, j = 0; i <= fanOut; ++i) {
+        for (int i = 0, j = 0; i < fanOut; ++i) {
             int offs = attrLen * i;
-            if (i == j + 1 && (i == fanOut || cmp(pData, cur.val(j)) < 0)) {
-                ptrs[i] = pageId;
+            if (i == j && (i == fanOut - 1 || cmp(pData, cur.val(j)) < 0)) {
+                ptrs[i + 1] = pageId;
                 memcpy(tbuf + offs, pData, attrLen);
             }
             else {
-                ptrs[i] = cur.child(j);
+                ptrs[i + 1] = cur.child(i + 1);
                 memcpy(tbuf + offs, cur.val(j++), attrLen);
             }
         }
 
-        cout << "  insertInner: splitting" << endl;
-        cout << "  "; for(int i = 0; i <= fanOut; ++i) cout << dec << ptrs[i] << " ";
+        cout << "  "; for(int i = 0; i <= fanOut; ++i) cout << ptrs[i] << " ";
         cout << endl;
 
         int n = nodeNum();
         setNodeNum(++n);
 
-        // left node: cur
+        // update parent
+        BPlusNode nch;
+        nch.owner = this;
+        for (int i = fanOut / 2 + 1; i <= fanOut; ++i) {
+            nch.pageId = ptrs[i];
+            nch.getPage();
+            nch.setParent(n);
+        }
+
         cur.getPage();
         cur.clear();
         cur.setCount(fanOut / 2);
@@ -241,7 +246,7 @@ void BPlusTree::insertInner(void* pData, int pageId) {
                     pos = j + 1;
                     break;
                 }
-        cout << "  insertEntry: found pos = " << pos << endl;
+        //cout << "  insertEntry: found pos = " << pos << endl;
         cur.setChild(l + 1, cur.child(l));
         for (int j = l; j > pos; --j)
             cur.setBlock(j, cur.block(j - 1));
@@ -252,8 +257,7 @@ void BPlusTree::insertInner(void* pData, int pageId) {
 }
 
 void BPlusTree::makeRoot(void* pData, int left, int right) {
-    cout << "  makeRoot: " << (char*)pData << " " << left << " " << right << endl;
-
+    //cout << "  makeRoot: " << (char*)pData << " " << left << " " << right << endl;
     int n = nodeNum();
     setNodeNum(++n);
 
@@ -508,8 +512,6 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
 }
 
 void BPlusTree::printTree() {
-    setiosflags(ios::showbase);
-
     queue<int> Q;
     Q.push(root());
 
@@ -536,12 +538,12 @@ void BPlusTree::printTree() {
         if (v.type() == BT_LEAF){
             for (int i = 0; i < l; ++i) {
                 RID rid = v.rec(i);
-                cout << "   Pointer: Page #" << dec << rid.getPage() << ", Slot #" << rid.getSlot() << endl;
+                cout << "   Pointer: Page #" << rid.getPage() << ", Slot #" << rid.getSlot() << endl;
                 cout << "   Rec: ";
 
                 uchar* base = (uchar*)v.val(i);
                 for (int j = 0; j < attrLen; ++j)
-                    cout << "0x" << hex << (int)(*(base + j)) << " ";
+                    cout << (char)(*(base + j));
                 cout << endl;
             }
             cout << "   Next Page : Page #" << v.child(l) << endl;
@@ -554,7 +556,7 @@ void BPlusTree::printTree() {
 
                 uchar* base = (uchar*)v.val(i);
                 for (int j = 0; j < attrLen; ++j)
-                    cout << "0x" << hex << (int)(*(base + j)) << " ";
+                    cout << (char)(*(base + j));
                 cout << endl;
                 Q.push(v.child(i));
             }
