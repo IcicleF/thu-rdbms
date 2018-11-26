@@ -1,8 +1,6 @@
 #ifndef IX_MANAGER_H
 #define IX_MANAGER_H
 
-#include "errs.h"
-#include "rm/rm_scanner.h"
 #include "ix/ix_handler.h"
 #include "pf/bufmanager/BufPageManager.h"
 #include "pf/fileio/FileManager.h"
@@ -11,6 +9,7 @@
 class IXManager {
     FileManager *fm;
     BufPageManager *bpm;
+
     public:
         IXManager();
         IXManager(FileManager *fm, BufPageManager *bpm);
