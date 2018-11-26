@@ -275,7 +275,7 @@ void BPlusTree::makeRoot(void* pData, int left, int right) {
 void BPlusTree::deleteInnerNode(int pageId)
 {
     if (pageId == root()) return;
-    BPlusNode tcur,fa,lsib,rsib;
+    BPlusNode tcur,fa,lsib,rsib,child;
     tcur.owner = this;
     tcur.pageId = pageId;
     tcur.getPage();
@@ -286,6 +286,8 @@ void BPlusTree::deleteInnerNode(int pageId)
     fa.pageId = faid;
     fa.getPage();
     
+    child.owner = this;
+
     for (int i = 0; i <= fa.count(); i++){
         if (fa.child(i) == tcur.pageId){
             fa_pos = i;
@@ -333,6 +335,11 @@ void BPlusTree::deleteInnerNode(int pageId)
         this->setNodeNum(this->nodeNum() - 1);
         if (fa_pos != 0){
             tcur.setChild(tcur.count() + lsib.count() + 1, tcur.child(tcur.count()));
+            for(int i = 0; i <= lsib.count(); i++){
+                child.pageId = lsib.child(i);
+                child.getPage();
+                child.setParent(tcur.pageId);
+            }
             for(int i = tcur.count() - 1 ; i >= 0 ; i--)tcur.setBlock(i + lsib.count() + 1, tcur.block(i));
             for(int i = 0; i < lsib.count(); i++)tcur.setBlock(i, lsib.block(i));
             tcur.setChild(lsib.count(), lsib.child(lsib.count()));
@@ -353,6 +360,11 @@ void BPlusTree::deleteInnerNode(int pageId)
         }
         else {
             rsib.setChild(tcur.count() + rsib.count() + 1, rsib.child(rsib.count()));
+            for(int i = 0; i <= tcur.count(); i++){
+                child.pageId = tcur.child(i);
+                child.getPage();
+                child.setParent(rsib.pageId);
+            }
             for(int i = rsib.count() - 1 ; i >= 0 ; i--)tcur.setBlock(i + tcur.count() + 1, tcur.block(i));
             for(int i = 0; i < tcur.count(); i++)rsib.setBlock(i, tcur.block(i));
             rsib.setChild(tcur.count(), tcur.child(tcur.count()));
@@ -404,9 +416,10 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
         }
         cout << "Delete " << (char *)pData << endl;
         //删除操作
+        tcur.getPage();
         int pos = 0;
         for (int i = 0 ; i < tcur.count() ; i++){
-            if (cmp(pData, cur.val(i)) == 0){
+            if (cmp(pData, tcur.val(i)) == 0){
                 pos = i;
                 break;
             }
@@ -415,12 +428,14 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
         tcur.setChild(tcur.count() - 1, tcur.child(tcur.count()));
         tcur.setCount(tcur.count() - 1);
         if (tcur.pageId != root()){
+            fa.getPage();
             if (pos == 0) fa.setVal(fa_pos - 1, tcur.val(0));
         }
 
         if (tcur.count() < (fanOut - 1)/2 && tcur.pageId != root()){
             cout << "delete special" << endl;
             // 删除的特殊处理
+            tcur.getPage();
             bool pl,pr;
             pl = false;
             pr = false;
@@ -440,6 +455,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                 //直接由兄弟节点借
                 if (pl == true){
                     fa.setVal(fa_pos - 1, lsib.val(lsib.count() - 1));
+                    cur.getPage();
                     cur.setChild(cur.count()+1, cur.child(cur.count()));
                     for(int i = cur.count() - 1; i >= 0; i--)cur.setBlock(i+1, cur.block(i));
                     cur.setCount(cur.count() + 1);
