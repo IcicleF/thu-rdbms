@@ -80,10 +80,10 @@ void BPlusNode::setChild(int i, int ch) {
 }
 
 int BPlusNode::lastPtr() const {
-    return child(owner->fanOut - 1);
+    return child(owner->fanOut);
 }
 void BPlusNode::setLastPtr(int p) {
-    setChild(owner->fanOut - 1, p);
+    setChild(owner->fanOut, p);
 }
 
 RID BPlusNode::rec(int i) const {

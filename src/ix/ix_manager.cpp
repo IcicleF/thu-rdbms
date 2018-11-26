@@ -16,7 +16,7 @@ int IXManager::createIndex(const char *fileName, int indexNo, AttrType attrtype,
     int fileId,index;
     BufType b;
 
-    ss = fileName + to_string(indexNo);
+    ss = fileName + to_string(indexNo) + ".index";
     int len = ss.length();
     char *finalfn;
     finalfn = new char[len+2];
@@ -46,7 +46,7 @@ IXHandler* IXManager::openIndex(const char *fileName, int indexNo)
     int len,index;
     BufType b;
 
-    ss = fileName + to_string(indexNo);
+    ss = fileName + to_string(indexNo) + ".index";
     len = ss.length();
     char *finalfn = new char[len + 2];
     for (int i = 0; i < len; i++){
