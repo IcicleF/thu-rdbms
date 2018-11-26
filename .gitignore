@@ -45,3 +45,6 @@ temp/*
 # Other Stuff
 .DS_Store
 .vscode/*
+
+# Database
+*.index
