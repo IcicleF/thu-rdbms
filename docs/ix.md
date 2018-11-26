@@ -2,6 +2,11 @@
 
 接口和功能大量地借鉴了 Stanford 课程网站上给出的接口示例。
 
+分工：
+
+* 高健（2016011352）：B+ 树结构设计和底层实现、B+ 树插入和检索、文档
+* 琚锡廷（2016011366）：B+ 树删除、IXManager、IXHandler、IXScanner 实现
+
 ## IXManager
 
 `IXManager` 负责管理索引文件，它的实现原理和记录管理部分的 `RMManager` 是完全类似的。
@@ -16,7 +21,11 @@ Stanford 课程官网中，`createIndex` 和 `openIndex` 支持指定一个索�
 
 `IXHandler` 负责插入、删除和检索索引。
 
-`IXHandler` 几乎什么都不做，主要的任务都由 `BPlusTree` 类完成。`IXManager` 负责创建和初始化一个 `BPlusTree` 实例；`IXHandler` 接受这个实例，并且准备好比较两个索引值的函数供 `BPlusTree` 调用。
+`IXHandler` 几乎什么都不做，主要的任务都由 `BPlusTree` 类完成。`IXManager` 负责创建和初始化一个 `BPlusTree` 实例；`IXHandler` 接受这个实例，并且准备好比较两个索引值的函数（一个`std::function<int(void*, void*)>`实例）供 `BPlusTree` 调用。
+
+## IXScanner
+
+`IXScanner` 接受一个
 
 ## BPlusTree
 
@@ -48,3 +57,9 @@ Stanford 课程官网中，`createIndex` 和 `openIndex` 支持指定一个索�
 * 残余的空间被废弃。
 
 内部节点使用指针域的前 4 个字节存储一个页号，后 2 个字节不使用。叶节点使用 0 ~ n-1 的指针存储一个 RID (page 4 字节 + slot 2 字节)，第 n 个指针存储一个页号（用来连接所有叶子形成单向链表）。
+
+### 基本操作
+
+检索、插入和删除都在 `BPlusTree` 中完整实现，另外还提供函数用于广度优先搜索整棵 B+ 树，方便 debug。
+
+详细的实现不再赘述。
