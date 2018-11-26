@@ -33,8 +33,9 @@ void BPlusTree::traceToLeaf(void *pData) {
     cur.getPage();
 
     while (cur.type() != BT_LEAF) {
-        if (cmp(pData, cur.val(0)) < 0)
+        if (cmp(pData, cur.val(0)) < 0){
             cur.pageId = cur.child(0);
+        }
         else {
             short l = cur.count();
             for (int i = l - 1; i >= 0; --i)
@@ -49,6 +50,7 @@ void BPlusTree::traceToLeaf(void *pData) {
 
 bool BPlusTree::searchEntry(void* pData, RID& rid) {
     traceToLeaf(pData);
+    
     int l = cur.count();
     for (int i = 0, r; i < l; ++i) {
         r = cmp(pData, cur.val(i));
@@ -86,9 +88,9 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
         setNodeNum(++n);
 
         BPlusNode nv(n);        // right node
-        nv.clear();
         nv.owner = this;
         nv.getPage();
+        nv.clear();
         nv.setCount(fanOut / 2);
         nv.setType(BT_LEAF);
 
@@ -105,7 +107,6 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
             nv.setBlock(i, tbuf + (attrLen + 6) * (i + fanOut / 2));
         nv.setChild(nv.count(), curNext);
         delete[] tbuf;
-
         // copy that key to parent
         CharBufType nextkey = new uchar[attrLen + 5];
         memcpy(nextkey, nv.val(0), attrLen);        
@@ -359,6 +360,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
     RID rs;
     BPlusNode tcur,fa,lsib,rsib,child;
     if(!searchEntry(pData, rs)){
+        cout << "delete failed! " << endl;
         return false;
     }
     else{

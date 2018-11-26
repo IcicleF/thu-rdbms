@@ -10,6 +10,7 @@ class IXHandler {
     public:
         AttrType attrtype;
         BPlusTree *bpt;
+        int attrlen;
 
         IXHandler(BPlusTree *bpt, AttrType attrtype, int attrlen);
         IXHandler();
