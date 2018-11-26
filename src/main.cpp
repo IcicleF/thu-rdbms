@@ -84,6 +84,13 @@ void test2(FileManager* fm, BufPageManager* bpm) {
     inse("wsgi", 23, 16);
     cout << "success: 6" << endl;
 
+    //ih->bpt->printTree();
+    cout << "Insert Test succeed ! " << endl;
+
+    auto dele = [&](const char* s, int page, short slot) -> void {
+        ih->deleteEntry((void *)s, RID(page, slot));
+    };
+    dele("2122", 212, 44);
     ih->bpt->printTree();
 }
 

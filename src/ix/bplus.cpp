@@ -35,8 +35,9 @@ void BPlusTree::traceToLeaf(void *pData) {
     cur.getPage();
 
     while (cur.type() != BT_LEAF) {
-        if (cmp(pData, cur.val(0)) < 0)
+        if (cmp(pData, cur.val(0)) < 0){
             cur.pageId = cur.child(0);
+        }
         else {
             short l = cur.count();
             for (int i = l - 1; i >= 0; --i)
@@ -51,6 +52,7 @@ void BPlusTree::traceToLeaf(void *pData) {
 
 bool BPlusTree::searchEntry(void* pData, RID& rid) {
     traceToLeaf(pData);
+    
     int l = cur.count();
     for (int i = 0, r; i < l; ++i) {
         r = cmp(pData, cur.val(i));
@@ -74,6 +76,7 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
         cout << "  insertEntry: full! need to split" << endl;
         // build oversized node
         CharBufType tbuf = new uchar[(attrLen + 6) * fanOut + 5];
+        memset(tbuf, 0, (attrLen + 6) * fanOut + 5);
         for (int i = 0, j = 0; i < fanOut; ++i) {
             int offs = (attrLen + 6) * i;
             if (i == j && (i == fanOut - 1 || cmp(pData, cur.val(j)) < 0)) {
@@ -137,7 +140,6 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
         if (l > 0) {
             if (cmp(pData, cur.val(0)) >= 0)
                 for (int j = l - 1; j >= 0; --j) {
-                    cout << j << ": ";
                     if (cmp(pData, cur.val(j)) >= 0) {
                         pos = j + 1;
                         break;
@@ -147,7 +149,6 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
             for (int j = l; j > pos; --j)
                 cur.setBlock(j, cur.block(j - 1));
         }
-        cur.clearBlock(pos);
         cur.setVal(pos, pData);
         cur.setRec(pos, rid);
         cur.setCount(cur.count() + 1);
@@ -156,6 +157,8 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
 
 // insert at cur, cur must be inner node
 void BPlusTree::insertInner(void* pData, int pageId) {
+    cout << "  insertInner: " << (char*)pData << " " << pageId << endl;
+
     assert(cur.type() == BT_INNER);
     int l = cur.count();
     int par = cur.parent();
@@ -163,6 +166,7 @@ void BPlusTree::insertInner(void* pData, int pageId) {
         // build oversized node (ptr data separated)
         int* ptrs = new int[fanOut + 5];
         CharBufType tbuf = new uchar[attrLen * fanOut + 5];
+        memset(tbuf, 0, attrLen * fanOut + 5);
         ptrs[0] = cur.child(0);
         for (int i = 1, j = 0; i <= fanOut; ++i) {
             int offs = attrLen * i;
@@ -237,17 +241,19 @@ void BPlusTree::insertInner(void* pData, int pageId) {
                     pos = j + 1;
                     break;
                 }
+        cout << "  insertEntry: found pos = " << pos << endl;
         cur.setChild(l + 1, cur.child(l));
         for (int j = l; j > pos; --j)
             cur.setBlock(j, cur.block(j - 1));
-        cur.clearBlock(pos);
         cur.setVal(pos, pData);
-        cur.setChild(pos, pageId);
+        cur.setChild(pos + 1, pageId);
         cur.setCount(cur.count() + 1);
     }
 }
 
 void BPlusTree::makeRoot(void* pData, int left, int right) {
+    cout << "  makeRoot: " << (char*)pData << " " << left << " " << right << endl;
+
     int n = nodeNum();
     setNodeNum(++n);
 
@@ -273,13 +279,20 @@ void BPlusTree::deleteInnerNode(int pageId)
     tcur.owner = this;
     tcur.pageId = pageId;
     tcur.getPage();
-    if (tcur.count() >= (fanOut-1)/2 - 1) return;
+    if (tcur.count() >= (fanOut-1)/2 ) return;
     int faid,fa_pos;
     faid = tcur.parent();
-    fa_pos = tcur.parentPtr();
     fa.owner = this;
     fa.pageId = faid;
     fa.getPage();
+    
+    for (int i = 0; i <= fa.count(); i++){
+        if (fa.child(i) == tcur.pageId){
+            fa_pos = i;
+            break;
+        }
+    }
+
     bool pl,pr;
     pl = false;
     pr = false;
@@ -287,13 +300,13 @@ void BPlusTree::deleteInnerNode(int pageId)
         lsib.pageId = fa.child(fa_pos - 1);
         lsib.owner = this;
         lsib.getPage();
-        if (lsib.count() >= (fanOut-1)/2) pl = true;
+        if (lsib.count() > (fanOut-1)/2) pl = true;
     }
     else{
         rsib.pageId = fa.child(fa_pos + 1);
         rsib.owner = this;
         rsib.getPage();
-        if (rsib.count() >= (fanOut-1)/2) pr = true;
+        if (rsib.count() > (fanOut-1)/2) pr = true;
     }
 
     if (pl == true || pr == true){
@@ -366,18 +379,29 @@ void BPlusTree::deleteInnerNode(int pageId)
 bool BPlusTree::deleteEntry(void *pData, const RID& rid) 
 {
     RID rs;
-    BPlusNode tcur,fa,lsib,rsib;
+    BPlusNode tcur,fa,lsib,rsib,child;
     if(!searchEntry(pData, rs)){
+        cout << "delete failed! " << endl;
         return false;
     }
     else{
+        child.owner = this;
+
         tcur.pageId = cur.pageId;
         tcur.owner = this;
         tcur.getPage();
         int faid,fa_pos;
         if (tcur.pageId != root()){
             faid = tcur.parent();
-            fa_pos = tcur.parentPtr();
+            fa.pageId = faid;
+            fa.owner = this;
+            fa.getPage();
+            for (int i = 0; i <= fa.count(); i++){
+                if (fa.child(i) == tcur.pageId){
+                    fa_pos = i;
+                    break;
+                }
+            }
         }
 
         //删除操作
@@ -392,9 +416,6 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
         tcur.setChild(tcur.count() - 1, tcur.child(tcur.count()));
         tcur.setCount(tcur.count() - 1);
         if (tcur.pageId != root()){
-            fa.pageId = faid;
-            fa.owner = this;
-            fa.getPage();
             if (pos == 0) fa.setVal(fa_pos - 1, tcur.val(0));
         }
 
@@ -450,11 +471,11 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                         bpm->release(faid);
                         this->setRoot(lsib.pageId);
                         this->setNodeNum(this->nodeNum() - 1);
-                        return false;
+                        return true;
                     }
                     else{
                         if (fa_pos < fa.count())fa.setVal(fa_pos - 1, fa.val(fa_pos));
-                        for(int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+                        for (int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
                         fa.setChild(fa.count() - 1, fa.child(fa.count()));
                         fa.setCount(fa.count() - 1);
                     }
@@ -468,13 +489,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                         bpm->release(faid);
                         this->setRoot(tcur.pageId);
                         this->setNodeNum(this->nodeNum() - 1);
-                        return false;
-                    }
-                    else{
-                        if (fa_pos + 1 < fa.count())fa.setVal(fa_pos, fa.val(fa_pos + 1));
-                        for(int i = fa_pos + 2; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
-                        fa.setChild(fa.count() - 1, fa.child(fa.count()));
-                        fa.setCount(fa.count() - 1);
+                        return true;
                     }
                 }
                 deleteInnerNode(faid);
@@ -510,7 +525,7 @@ void BPlusTree::printTree() {
             cout << v.parent() << endl;
 
         cout << " Records:" << endl;
-        if (v.type() == BT_LEAF)
+        if (v.type() == BT_LEAF){
             for (int i = 0; i < l; ++i) {
                 RID rid = v.rec(i);
                 cout << "   Pointer: Page #" << dec << rid.getPage() << ", Slot #" << rid.getSlot() << endl;
@@ -521,6 +536,8 @@ void BPlusTree::printTree() {
                     cout << "0x" << hex << (int)(*(base + j)) << " ";
                 cout << endl;
             }
+            cout << "   Next Page : Page #" << v.child(l) << endl;
+        }
         else {
             for (int i = 0; i < l; ++i) {
                 RID rid = v.rec(i);

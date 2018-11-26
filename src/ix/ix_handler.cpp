@@ -13,14 +13,16 @@ IXHandler::IXHandler(BPlusTree *bpt, AttrType attrtype, int attrlen)
 {
     int ai,bi;
     float af,bf;
-
     this->bpt = bpt;
     this->attrtype = attrtype;
+    this->attrlen = attrlen;
     bpt->cmp = [&] (void *a, void *b) -> int {
         if (attrtype == INTEGER){
             ai = atoi((char *)a);
             bi = atoi((char *)b);
-            return ai - bi;
+            if(ai < bi) return -1;
+            else if(af == bf)return 0;
+            else return 1;
         }
         else if(attrtype == FLOAT){
             af = atof((char *)a);
@@ -30,7 +32,7 @@ IXHandler::IXHandler(BPlusTree *bpt, AttrType attrtype, int attrlen)
             else return 1;
         }
         else{
-            return strncmp((char*)a, (char*)b, attrlen);
+            return strncmp((char*)a, (char*)b, this->attrlen);
         }
     };
 }
