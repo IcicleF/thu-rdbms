@@ -10,7 +10,7 @@ BPlusTree::BPlusTree(BufPageManager* bpm, int fileId, int attrLen) {
     this->bpm = bpm;
     this->fileId = fileId;
     this->attrLen = attrLen;
-    fanOut = (PAGE_SIZE - 8) / (attrLen + 10) + 1;
+    fanOut = (PAGE_SIZE - 16) / (attrLen + 6) + 1;
     cur.owner = this;
 }
 
