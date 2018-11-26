@@ -16,9 +16,12 @@ class IXScanner {
         bool nextRec(RID&);
         void closeScan();
     private:
+        void getnextRec();
+        void *standard;
         BPlusTree *bpt;
-        BPlusNode cur;
-        int curchild;
+        BPlusNode cur,stdcur;
+        bool pf;
+        int curchild,stdpos;
         int scanstatus;//1 means scanning 0 means nots
         ScanType scantype;
   
