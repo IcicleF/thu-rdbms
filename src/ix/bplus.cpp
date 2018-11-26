@@ -276,46 +276,66 @@ void BPlusTree::deleteInnerNode(int pageId)
 
     if (pl == true || pr == true){
         if (pl == true){
+            tcur.setChild(tcur.count() + 1, tcur.child(tcur.count()));
             for (int i = tcur.count() - 1; i >= 0 ; i--)tcur.setBlock(i+1, tcur.block(i));
-            for (int i = tcur.count(); i >= 0; i--)tcur.setChild(i+1, tcur.child(i));
             tcur.setChild(0, lsib.child(lsib.count()));
+            tcur.setVal(0, fa.val(fa_pos - 1));
             tcur.setCount(tcur.count() + 1);
-            tcur.setBlock(0, fa.block(fa_pos - 1));
-            fa.setBlock(fa_pos - 1, lsib.block(lsib.count() - 1));
+            fa.setVal(fa_pos - 1, lsib.val(lsib.count() - 1));
             lsib.setCount(lsib.count() - 1);
         }
         else {
-            tcur.setBlock(tcur.count(), fa.block(fa_pos));
+            tcur.setVal(tcur.count(), fa.val(fa_pos));
             tcur.setChild(tcur.count() + 1, rsib.child(0));
             tcur.setCount(tcur.count() + 1);
-            fa.setBlock(fa_pos, rsib.block(0));
-            for(int i = 0; i < rsib.count(); i++)rsib.setChild(i, rsib.child(i+1));
+            fa.setVal(fa_pos, rsib.val(0));
             for(int i = 1; i < rsib.count(); i++)rsib.setBlock(i-1, rsib.block(i));
+            rsib.setChild(rsib.count() - 1, rsib.child(rsib.count()));
             rsib.setCount(rsib.count() - 1);
         }
     }
     else {
+        this->setNodeNum(this->nodeNum() - 1);
         if (fa_pos != 0){
+            tcur.setChild(tcur.count() + lsib.count() + 1, tcur.child(tcur.count()));
             for(int i = tcur.count() - 1 ; i >= 0 ; i--)tcur.setBlock(i + lsib.count() + 1, tcur.block(i));
-            for(int i = tcur.count(); i >= 0 ; i--)tcur.setChild(i + lsib.count() + i, tcur.child(i));
-            for(int i = 0; i <= lsib.count(); i++)tcur.setChild(i, lsib.child(i));
             for(int i = 0; i < lsib.count(); i++)tcur.setBlock(i, lsib.block(i));
-            tcur.setBlock(lsib.count(), fa.block(fa_pos - 1));
+            tcur.setChild(lsib.count(), lsib.child(lsib.count()));
+            tcur.setVal(lsib.count(), fa.val(fa_pos - 1));
             tcur.setCount(tcur.count() + lsib.count() + 1);
-            for(int i = fa_pos; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
-            for(int i = fa_pos; i < fa.count(); i++)fa.setChild(i-1, fa.child(i));
-            fa.setCount(fa.count() - 1);
             bpm->release(lsib.pageId);
+            if (faid == root() && fa.count() == 1){
+                bpm->release(faid);
+                this->setRoot(tcur.pageId);
+                this->setNodeNum(this->nodeNum() - 1);
+                return;
+            }
+            else{
+                for(int i = fa_pos; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+                fa.setChild(fa.count() - 1, fa.child(fa.count()));
+                fa.setCount(fa.count() - 1);
+            }
         }
         else {
-            for(int i = 0; i < rsib.count(); i++)tcur.setBlock(tcur.count() + 1 + i, rsib.block(i));
-            for(int i = 0; i <= rsib.count(); i++)tcur.setChild(tcur.count() + 1 + i, rsib.child(i));
-            tcur.setBlock(tcur.count(), fa.block(fa_pos));
-            tcur.setCount(tcur.count() + rsib.count() + 1);
-            for(int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
-            for(int i = fa_pos + 1; i < fa.count(); i++)fa.setChild(i-1, fa.child(i));
-            fa.setCount(fa.count() - 1);
-            bpm->release(rsib.pageId);  
+            rsib.setChild(tcur.count() + rsib.count() + 1, rsib.child(rsib.count()));
+            for(int i = rsib.count() - 1 ; i >= 0 ; i--)tcur.setBlock(i + tcur.count() + 1, tcur.block(i));
+            for(int i = 0; i < tcur.count(); i++)rsib.setBlock(i, tcur.block(i));
+            rsib.setChild(tcur.count(), tcur.child(tcur.count()));
+            rsib.setVal(tcur.count(), fa.val(fa_pos));
+            rsib.setCount(tcur.count() + rsib.count() + 1);
+            bpm->release(tcur.pageId);
+            if (faid == root() && fa.count() == 1){
+                bpm->release(faid);
+                this->setRoot(rsib.pageId);
+                this->setNodeNum(this->nodeNum() - 1);
+                return;
+            }
+            else{
+                for(int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+                fa.setChild(fa.count() - 1, fa.child(fa.count()));
+                fa.setCount(fa.count() - 1);
+            }
+
         }
         deleteInnerNode(faid);
     }
@@ -343,14 +363,15 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                 break;
             }
         }
-        for (int i = pos + 1; i < l; i++)cur.setBlock(i, cur.block(i+1));
+        for (int i = pos + 1; i < l; i++)cur.setBlock(i-1, cur.block(i));
+        cur.setChild(l-1, cur.child(l));
         cur.setCount(l - 1);
         BPlusNode fa;
         if (cur.pageId != root()){
             fa.pageId = faid;
             fa.owner = this;
             fa.getPage();
-            if (pos == 0) fa.setVal(fa_pos - 1, fa.val(1));
+            if (pos == 0) fa.setVal(fa_pos - 1, cur.val(0));
         }
 
         if (l == fanOut/2 - 1 && cur.pageId != root()){
@@ -366,7 +387,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                 lsib.getPage();
                 if (lsib.count() >= fanOut/2)pl = true;
             }
-            if (fa_pos < l){
+            if (fa_pos < fa.count()){
                 rsib.pageId = fa.child(fa_pos + 1);
                 rsib.getPage();
                 if (rsib.count() >= fanOut/2)pr = true;
@@ -375,37 +396,63 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                 //直接由兄弟节点借
                 if (pl == true){
                     fa.setVal(fa_pos - 1, lsib.val(lsib.count() - 1));
-                    cur.setCount(l+1);
-                    for(int i = l - 1; i >= 0; i--)cur.setBlock(i+1, cur.block(i));
+                    cur.setChild(cur.count()+1, cur.child(cur.count()));
+                    for(int i = cur.count() - 1; i >= 0; i--)cur.setBlock(i+1, cur.block(i));
+                    cur.setCount(cur.count() + 1);
                     cur.setBlock(0, lsib.block(lsib.count()-1));
+                    lsib.clearBlock(lsib.count() - 1);
+                    lsib.setChild(lsib.count() - 1, lsib.count());
                     lsib.setCount(lsib.count() - 1);
                 }
                 else{
                     fa.setVal(fa_pos, rsib.val(1));
-                    cur.setCount(l+1);
-                    cur.setBlock(l+1, rsib.block(0));
+                    cur.setChild(cur.count() + 1, cur.child(cur.count()));
+                    cur.setBlock(cur.count(), rsib.block(0));
+                    cur.setCount(cur.count() + 1);
                     for(int i = 1; i < rsib.count(); i++)rsib.setBlock(i - 1, rsib.block(i));
+                    rsib.clearBlock(rsib.count() - 1);
+                    rsib.setChild(rsib.count() - 1, rsib.child(rsib.count()));
                     rsib.setCount(rsib.count() - 1);
                 }
             }
             else{
+                this->setNodeNum(this->nodeNum() - 1);
                 //和兄弟节点合并，向父节点传递
                 if (fa_pos != 0){
-                    cur.setCount(lsib.count() + cur.count());
+                    cur.setChild(cur.count() + lsib.count(), cur.child(cur.count()));
                     for(int i = cur.count() - 1; i >= 0; i--)cur.setBlock(i + lsib.count(), cur.block(i));
                     for(int i = 0; i < lsib.count(); i++)cur.setBlock(i, lsib.block(i));
-                    for(int i = fa_pos; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
-                    for(int i = fa_pos; i < fa.count(); i++)fa.setChild(i-1, fa.child(i));
-                    fa.setCount(fa.count() - 1);
+                    cur.setCount(lsib.count() + cur.count());
                     bpm->release(lsib.pageId);
+                    if (faid == root() && fa.count() == 1){
+                        bpm->release(faid);
+                        this->setRoot(cur.pageId);
+                        this->setNodeNum(this->nodeNum() - 1);
+                        return;
+                    }
+                    else{
+                        for(int i = fa_pos; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+                        fa.setChild(fa.count() - 1, fa.child(fa.count()));
+                        fa.setCount(fa.count() - 1);
+                    }
                 }
                 else{
-                    cur.setCount(rsib.count() + cur.count());
-                    for(int i = 0; i < rsib.count(); i++)cur.setBlock(i + cur.count(), rsib.block(i));
-                    for(int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
-                    for(int i = fa_pos + 1; i < fa.count(); i++)fa.setChild(i-1, fa.child(i));
-                    fa.setCount(fa.count() - 1);
-                    bpm->release(rsib.pageId);
+                    rsib.setChild(cur.count() + rsib.count(), rsib.child(rsib.count()));
+                    for(int i = rsib.count() - 1; i >= 0; i--)rsib.setBlock(i + cur.count(), rsib.block(i));
+                    for(int i = 0; i < cur.count(); i++)rsib.setBlock(i, cur.block(i));
+                    rsib.setCount(rsib.count() + cur.count());
+                    bpm->release(cur.pageId);
+                    if (faid == root() && fa.count() == 1){
+                        bpm->release(faid);
+                        this->setRoot(rsib.pageId);
+                        this->setNodeNum(this->nodeNum() - 1);
+                        return;
+                    }
+                    else{
+                        for(int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+                        fa.setChild(fa.count() - 1, fa.child(fa.count()));
+                        fa.setCount(fa.count() - 1);
+                    }
                 }
                 deleteInnerNode(faid);
             }
