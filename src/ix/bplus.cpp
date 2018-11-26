@@ -85,7 +85,8 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
         int n = nodeNum();
         setNodeNum(++n);
 
-        BPlusNode nv(n);
+        BPlusNode nv(n);        // right node
+        nv.clear();
         nv.owner = this;
         nv.getPage();
         nv.setCount(fanOut / 2);
@@ -107,12 +108,12 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
 
         // copy that key to parent
         CharBufType nextkey = new uchar[attrLen + 5];
-        memcpy(nextkey, cur.val(0), attrLen);        
+        memcpy(nextkey, nv.val(0), attrLen);        
         assert((cur.parent() == 0) == (root() == cur.pageId));
         if (cur.parent() == 0) {
-            makeRoot(nextkey, nv.pageId, cur.pageId);
-            nv.setParent(root());
+            makeRoot(nextkey, cur.pageId, nv.pageId);
             cur.setParent(root());
+            nv.setParent(root());
         }
         else {
             nv.setParent(cur.parent());
@@ -200,9 +201,9 @@ void BPlusTree::insertInner(void* pData, int pageId) {
         
         assert((cur.parent() == 0) == (root() == cur.pageId));
         if (cur.parent() == 0) {
-            makeRoot(nextkey, nv.pageId, cur.pageId);
-            nv.setParent(root());
+            makeRoot(nextkey, cur.pageId, nv.pageId);
             cur.setParent(root());
+            nv.setParent(root());
         }
         else {
             nv.setParent(cur.parent());
