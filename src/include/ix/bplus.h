@@ -25,6 +25,7 @@ class BPlusTree {
         bool deleteEntry(void*, const RID&);
 
         void printTree();
+        int root() { return p0[3]; }
 
     private:
         BufPageManager* bpm;
