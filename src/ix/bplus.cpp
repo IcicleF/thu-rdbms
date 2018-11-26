@@ -381,7 +381,6 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
     RID rs;
     BPlusNode tcur,fa,lsib,rsib,child;
     if(!searchEntry(pData, rs)){
-        cout << "delete failed! " << endl;
         return false;
     }
     else{
@@ -403,7 +402,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                 }
             }
         }
-
+        cout << "Delete " << (char *)pData << endl;
         //删除操作
         int pos = 0;
         for (int i = 0 ; i < tcur.count() ; i++){
@@ -420,6 +419,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
         }
 
         if (tcur.count() < (fanOut - 1)/2 && tcur.pageId != root()){
+            cout << "delete special" << endl;
             // 删除的特殊处理
             bool pl,pr;
             pl = false;
@@ -470,6 +470,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                     if (faid == root() && fa.count() == 1){
                         bpm->release(faid);
                         this->setRoot(lsib.pageId);
+                        lsib.setParent(0);
                         this->setNodeNum(this->nodeNum() - 1);
                         return true;
                     }
@@ -483,13 +484,20 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                 else{
                     for (int i = 0; i < rsib.count(); i++)tcur.setBlock(i + tcur.count(), rsib.block(i));
                     tcur.setChild(tcur.count() + rsib.count(), rsib.child(rsib.count()));
-                    tcur.setCount(tcur.count() + tcur.count());
+                    tcur.setCount(tcur.count() + rsib.count());
                     bpm->release(rsib.pageId);
                     if (faid == root() && fa.count() == 1){
                         bpm->release(faid);
                         this->setRoot(tcur.pageId);
+                        tcur.setParent(0);
                         this->setNodeNum(this->nodeNum() - 1);
                         return true;
+                    }
+                    else{
+                        if (fa_pos + 1 < fa.count())fa.setVal(fa_pos, fa.val(fa_pos + 1));
+                        for (int i = fa_pos + 2; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+                        fa.setChild(fa.count() - 1, fa.child(fa.count()));
+                        fa.setCount(fa.count() - 1);                       
                     }
                 }
                 deleteInnerNode(faid);
