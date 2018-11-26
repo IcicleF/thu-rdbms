@@ -22,6 +22,7 @@ class BPlusTree {
         bool deleteEntry(void*, const RID&);
 
         void printTree();
+        int root() { return p0[3]; }
 
     private:
         BufPageManager* bpm;
@@ -31,7 +32,6 @@ class BPlusTree {
         BufType p0;
         int p0Index;
         int nodeNum() { return p0[2]; }
-        int root() { return p0[3]; }
         void setNodeNum(int nn) {
             p0[2] = nn;
             bpm->markDirty(p0Index);
