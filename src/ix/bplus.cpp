@@ -256,13 +256,20 @@ void BPlusTree::deleteInnerNode(int pageId)
     tcur.owner = this;
     tcur.pageId = pageId;
     tcur.getPage();
-    if (tcur.count() >= (fanOut-1)/2 - 1) return;
+    if (tcur.count() >= (fanOut-1)/2 ) return;
     int faid,fa_pos;
     faid = tcur.parent();
-    fa_pos = tcur.parentPtr();
     fa.owner = this;
     fa.pageId = faid;
     fa.getPage();
+    
+    for (int i = 0; i <= fa.count(); i++){
+        if (fa.child(i) == tcur.pageId){
+            fa_pos = i;
+            break;
+        }
+    }
+
     bool pl,pr;
     pl = false;
     pr = false;
@@ -270,13 +277,13 @@ void BPlusTree::deleteInnerNode(int pageId)
         lsib.pageId = fa.child(fa_pos - 1);
         lsib.owner = this;
         lsib.getPage();
-        if (lsib.count() >= (fanOut-1)/2) pl = true;
+        if (lsib.count() > (fanOut-1)/2) pl = true;
     }
     else{
         rsib.pageId = fa.child(fa_pos + 1);
         rsib.owner = this;
         rsib.getPage();
-        if (rsib.count() >= (fanOut-1)/2) pr = true;
+        if (rsib.count() > (fanOut-1)/2) pr = true;
     }
 
     if (pl == true || pr == true){
@@ -349,18 +356,28 @@ void BPlusTree::deleteInnerNode(int pageId)
 bool BPlusTree::deleteEntry(void *pData, const RID& rid) 
 {
     RID rs;
-    BPlusNode tcur,fa,lsib,rsib;
+    BPlusNode tcur,fa,lsib,rsib,child;
     if(!searchEntry(pData, rs)){
         return false;
     }
     else{
+        child.owner = this;
+
         tcur.pageId = cur.pageId;
         tcur.owner = this;
         tcur.getPage();
         int faid,fa_pos;
         if (tcur.pageId != root()){
             faid = tcur.parent();
-            fa_pos = tcur.parentPtr();
+            fa.pageId = faid;
+            fa.owner = this;
+            fa.getPage();
+            for (int i = 0; i <= fa.count(); i++){
+                if (fa.child(i) == tcur.pageId){
+                    fa_pos = i;
+                    break;
+                }
+            }
         }
 
         //删除操作
@@ -375,9 +392,6 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
         tcur.setChild(tcur.count() - 1, tcur.child(tcur.count()));
         tcur.setCount(tcur.count() - 1);
         if (tcur.pageId != root()){
-            fa.pageId = faid;
-            fa.owner = this;
-            fa.getPage();
             if (pos == 0) fa.setVal(fa_pos - 1, tcur.val(0));
         }
 
@@ -433,11 +447,11 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                         bpm->release(faid);
                         this->setRoot(lsib.pageId);
                         this->setNodeNum(this->nodeNum() - 1);
-                        return;
+                        return true;
                     }
                     else{
                         if (fa_pos < fa.count())fa.setVal(fa_pos - 1, fa.val(fa_pos));
-                        for(int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
+                        for (int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
                         fa.setChild(fa.count() - 1, fa.child(fa.count()));
                         fa.setCount(fa.count() - 1);
                     }
@@ -451,7 +465,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                         bpm->release(faid);
                         this->setRoot(tcur.pageId);
                         this->setNodeNum(this->nodeNum() - 1);
-                        return;
+                        return true;
                     }
                     else{
                         if (fa_pos + 1 < fa.count())fa.setVal(fa_pos, fa.val(fa_pos + 1));
@@ -493,7 +507,7 @@ void BPlusTree::printTree() {
             cout << v.parent() << endl;
 
         cout << " Records:" << endl;
-        if (v.type() == BT_LEAF)
+        if (v.type() == BT_LEAF){
             for (int i = 0; i < l; ++i) {
                 RID rid = v.rec(i);
                 cout << "   Pointer: Page #" << dec << rid.getPage() << ", Slot #" << rid.getSlot() << endl;
@@ -504,6 +518,8 @@ void BPlusTree::printTree() {
                     cout << "0x" << hex << (int)(*(base + j)) << " ";
                 cout << endl;
             }
+            cout << "   Next Page : Page #" << v.child(l) << endl;
+        }
         else {
             for (int i = 0; i < l; ++i) {
                 RID rid = v.rec(i);
