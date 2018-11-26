@@ -30,14 +30,17 @@ class BPlusTree {
 
         BufType p0;
         int p0Index;
-        int nodeNum() { return p0[2]; }
-        int root() { return p0[3]; }
+        int _nodeNum, _root;
+        int nodeNum() { return _nodeNum; }
+        int root() { return _root; }
         void setNodeNum(int nn) {
-            p0[2] = nn;
+            bpm->getPage(fileId, 0, p0Index);
+            p0[2] = _nodeNum = nn;
             bpm->markDirty(p0Index);
         }
         void setRoot(int r) {
-            p0[3] = r;
+            bpm->getPage(fileId, 0, p0Index);
+            p0[3] = _root = r;
             bpm->markDirty(p0Index);
         }
         
