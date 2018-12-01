@@ -70,6 +70,9 @@ WHITESPACE      ([ \t]+)
 
 {IDENTIFIER}    { yylval = new AstIdentifier(yytext); return IDENTIFIER; }
 
+{NEWLINE}       { }
+{WHITESPACE}    { }
+
 .               { issueError(yytext); }
 
 %%

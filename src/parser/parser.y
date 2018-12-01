@@ -61,14 +61,14 @@ Stmt:       SHOW DATABASES {
             INSERT INTO IDENTIFIER VALUES ValLists {
                 $$ = new AstInsert($3, $5);
             }|
-            DELETE FROM IDENTIFIER WHERE WhClause {
-                $$ = new AstDelete($3, $5);
+            DELETE FROM IDENTIFIER WhereIf {
+                $$ = new AstDelete($3, $4);
             }|
-            UPDATE IDENTIFIER SET SetClause WHERE WhClause {
-                $$ = new AstUpdate($2, $4, $6);
+            UPDATE IDENTIFIER SET SetClause WhereIf {
+                $$ = new AstUpdate($2, $4, $5);
             }|
-            SELECT Selector FROM IdentList WHERE WhClause {
-                $$ = new AstSelect($2, $4, $6);
+            SELECT Selector FROM IdentList WhereIf {
+                $$ = new AstSelect($2, $4, $5);
             }|
             CREATE INDEX IDENTIFIER '(' IDENTIFIER ')' {
                 $$ = new AstCreateIndex($3, $5);
@@ -127,10 +127,15 @@ ValList:    Value {
                 $$ = new AstValList($1, $3);
             };
 
-Value:      INTEGER|
-            FLOAT|
-            STRING|
+Value:      LITERAL|
             SQLNULL;
+
+WhereIf:    WHERE WhClause {
+                $$ = $2;
+            }|
+            /* empty */ {
+                $$ = NULL;
+            };
 
 WhClause:   WhClause AND WhClause {
                 $$ = new AstWhereClause($1, $3, WHERE_AND);
