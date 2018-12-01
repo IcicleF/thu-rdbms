@@ -2,8 +2,8 @@
 #define PARSER_TREE
 
 #include <vector>
+#include "identprinter.h"
 
-class QueryResponse;
 class AstBase {
     protected:
         int type;
@@ -12,29 +12,23 @@ class AstBase {
             float floatval;
             char* strval;
         };
-
-        AstBase* parent;
-        std::vector<AstBase*> childs;
     
     public:
-        AstBase(int type = 0) : type(type) { 
-            childs.clear();
-        }
-        virtual void printTree() = 0;
+        AstBase(int type = 0) : type(type) { }
+        virtual void printTree(IdentPrinter&) = 0;
 };
-
-extern AstBase* ast;
 
 const int L_INT = 500;
 const int L_DECIMAL = L_INT + 1;
 const int L_STRING = L_DECIMAL + 1;
-const int L_NULL = L_STRING + 1;
 
 const int AST_KEYWORD = 1000;
-const int AST_LITERAL = AST_KEYWORD + 1;
+const int AST_OPER = AST_KEYWORD + 1;
+const int AST_LITERAL = AST_OPER + 1;
 const int AST_IDENTIFIER = AST_LITERAL + 1;
 const int AST_TOPLEVEL = AST_IDENTIFIER + 1;
-const int AST_SHOWDB = AST_TOPLEVEL + 1;
+const int AST_STMTLIST = AST_TOPLEVEL + 1;
+const int AST_SHOWDB = AST_STMTLIST + 1;
 const int AST_SETPARAM = AST_SHOWDB + 1;
 const int AST_CREATEDB = AST_SETPARAM + 1;
 const int AST_DROPDB = AST_CREATEDB + 1;
@@ -73,7 +67,7 @@ const int TYPE_INT = 2000;
 const int TYPE_CHAR = TYPE_INT + 1;
 const int TYPE_VARCHAR = TYPE_CHAR + 1;
 const int TYPE_DATE = TYPE_VARCHAR + 1;
-const int TYPE_FLOAT = TYPE_FLOAT + 1;
+const int TYPE_FLOAT = TYPE_DATE + 1;
 
 const int WHERE_AND = 3000;
 const int WHERE_OR = WHERE_AND + 1;

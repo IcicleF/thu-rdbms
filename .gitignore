@@ -43,7 +43,6 @@ Makefile
 log.txt
 *gen.txt
 temp*
-test*
 lex.yy.c
 parser.tab.h
 parser.tab.c

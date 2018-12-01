@@ -30,11 +30,7 @@ UPDATE
 SELECT
 AND
 OR
-AS
 IS
-AVG
-MIN
-MAX
 
 (
 )

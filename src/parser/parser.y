@@ -27,13 +27,25 @@
 
 %% 
 
-Program:    Stmt ';' {
-                ast = new AstTopLevel($1);
+Program:    StmtList {
+                $$ = new AstTopLevel($1);
+                std::cout << std::endl;
+                IdentPrinter* ip = new IdentPrinter();
+                $$->printTree(*ip);
+                delete ip;
+                std::cout << std::endl;
+            };
+
+StmtList:   Stmt ';' {
+                $$ = new AstStmtList(NULL, $1);
+            }|
+            StmtList Stmt ';' {
+                $$ = new AstStmtList($1, $2);
             };
 
 Stmt:       SHOW DATABASES {
                 $$ = new AstShowDB();
-            } |
+            }|
             SET IDENTIFIER '=' Value {
                 $$ = new AstSetParam($2, $4);
             }|
@@ -85,10 +97,10 @@ FieldList:  Field {
             };
 
 Field:      IDENTIFIER Type NOT SQLNULL {
-                $$ = new AstField($2, $1, true);
+                $$ = new AstField($1, $2, true);
             }|
             IDENTIFIER Type {
-                $$ = new AstField($2, $1, false);
+                $$ = new AstField($1, $2, false);
             }|
             PRIMARY KEY '(' IdentList ')' {
                 $$ = new AstPrimaryKeyDecl($4);
@@ -97,13 +109,13 @@ Field:      IDENTIFIER Type NOT SQLNULL {
                 $$ = new AstForeignKeyDecl($4, $7, $9);
             };
 
-Type:       INT '(' INTEGER ')' {
+Type:       INT '(' LITERAL ')' {
                 $$ = new AstType(TYPE_INT, $3);
             }|
-            CHAR '(' INTEGER ')' {
+            CHAR '(' LITERAL ')' {
                 $$ = new AstType(TYPE_CHAR, $3);
             }|
-            VARCHAR '(' INTEGER ')' {
+            VARCHAR '(' LITERAL ')' {
                 $$ = new AstType(TYPE_VARCHAR, $3);
             }|
             DATE {

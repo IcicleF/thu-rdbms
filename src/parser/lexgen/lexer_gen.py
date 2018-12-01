@@ -13,7 +13,7 @@ for kwd in keywds:
         ouf.write('\n')
     else:
         if cur == 0:
-            ouf.write('"' + kwd + '"' + ' ' * (14 - len(kwd)) + '{ yylval = new AstKeyword(' + kwd + '); return ' + kwd + '; }\n')
+            ouf.write('"' + kwd + '"' + ' ' * (14 - len(kwd)) + '{ yylval = new AstKeyword(' + kwd + ', "' + kwd + '"); return ' + kwd + '; }\n')
         else:
-            ouf.write('"' + kwd + '"' + ' ' * (14 - len(kwd)) + '{ yylval = new AstKeyword(\'' + kwd + '\'); return \'' + kwd + '\'; }\n')
+            ouf.write('"' + kwd + '"' + ' ' * (14 - len(kwd)) + '{ yylval = new AstOper(\'' + kwd + '\'); return \'' + kwd + '\'; }\n')
 ouf.close()
