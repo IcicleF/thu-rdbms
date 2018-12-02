@@ -46,9 +46,9 @@ log.txt
 *gen.txt
 temp*
 test*
-lex.yy.c
-parser.tab.h
-parser.tab.c
+lex.yy.cpp
+parser.tab.hpp
+parser.tab.cpp
 
 # Misc
 .DS_Store

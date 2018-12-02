@@ -1,6 +1,7 @@
 #ifndef PARSER_TREE
 #define PARSER_TREE
 
+#include <any>
 #include <vector>
 #include "identprinter.h"
 
@@ -16,6 +17,9 @@ class AstBase {
     public:
         AstBase(int type = 0) : type(type) { }
         virtual void printTree(IdentPrinter&) = 0;
+        virtual std::any eval() {
+            return std::any();
+        }
 };
 
 const int L_INT = 500;

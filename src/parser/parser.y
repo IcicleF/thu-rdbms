@@ -1,16 +1,16 @@
 %define api.value.type { class AstBase* }
 %{
-    #include "parser_base.h"
+    #include "parser/parser_base.h"
 %}
 
-%token DATABASE  TABLE      INDEX  CREATE  DROP
+%token DATABASE  TABLE      INDEX    CREATE  DROP
 %token DATABASES TABLES     SHOW
-%token USE       DESC       SET    INT     CHAR
-%token VARCHAR   FLOAT      DATE   PRIMARY FOREIGN
-%token KEY       REFERENCES NOT    SQLNULL INSERT
-%token INTO      VALUES     DELETE FROM    WHERE
-%token UPDATE    SELECT     AND    OR      IS
-%token INTEGER   IDENTIFIER STRING LITERAL
+%token USE       DESC       SET      INTTYPE CHARTYPE
+%token FOREIGN   FLOATTYPE  DATETYPE PRIMARY VARCHARTYPE
+%token KEY       REFERENCES NOT      SQLNULL INSERT
+%token INTO      VALUES     DELETE   FROM    WHERE
+%token UPDATE    SELECT     AND      OR      IS
+%token LITERAL   IDENTIFIER
 %token '+' '-' ',' '(' ')' '=' '<' '>' UMINUS
 %token LESS_EQ   GREATER_EQ NOT_EQ
 
@@ -107,19 +107,19 @@ Field:      Ident Type NOT SQLNULL {
                 $$ = new AstForeignKeyDecl($4, $7, $9);
             };
 
-Type:       INT '(' LITERAL ')' {
+Type:       INTTYPE '(' LITERAL ')' {
                 $$ = new AstType(TYPE_INT, $3);
             }|
-            CHAR '(' LITERAL ')' {
+            CHARTYPE '(' LITERAL ')' {
                 $$ = new AstType(TYPE_CHAR, $3);
             }|
-            VARCHAR '(' LITERAL ')' {
+            VARCHARTYPE '(' LITERAL ')' {
                 $$ = new AstType(TYPE_VARCHAR, $3);
             }|
-            DATE {
+            DATETYPE {
                 $$ = new AstType(TYPE_DATE, NULL);
             }|
-            FLOAT {
+            FLOATTYPE {
                 $$ = new AstType(TYPE_FLOAT, NULL);
             };
 
@@ -236,6 +236,6 @@ IdentList:  Ident {
             };
 
 Ident:      IDENTIFIER|
-            DATE {
+            DATETYPE {
                 $$ = new AstIdentifier("date");
             };

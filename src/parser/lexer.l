@@ -1,15 +1,15 @@
 %option caseless
 %{
-    #include "parser_base.h"
-    #include "parser.tab.h"
+    #include "parser/parser_base.h"
+    #include "parser.tab.hpp"
 
     std::string builder;
 %}
 
 NEWLINE         (\r|\n|\r\n)
 DIGIT           ([0-9])
-INTEGER         ({DIGIT}+)
-DECIMAL         ({INTEGER}"."{INTEGER})
+INTEGER_VAL     ({DIGIT}+)
+DECIMAL_VAL     ({INTEGER_VAL}"."{INTEGER_VAL})
 IDENTIFIER      ([A-Za-z][_0-9A-Za-z]*)
 WHITESPACE      ([ \t]+)
 
@@ -32,11 +32,11 @@ WHITESPACE      ([ \t]+)
 "USE"           { yylval = new AstKeyword(USE, "USE"); return USE; }
 "DESC"          { yylval = new AstKeyword(DESC, "DESC"); return DESC; }
 "SET"           { yylval = new AstKeyword(SET, "SET"); return SET; }
-"INT"           { yylval = new AstKeyword(INT, "INT"); return INT; }
-"CHAR"          { yylval = new AstKeyword(CHAR, "CHAR"); return CHAR; }
-"VARCHAR"       { yylval = new AstKeyword(VARCHAR, "VARCHAR"); return VARCHAR; }
-"FLOAT"         { yylval = new AstKeyword(FLOAT, "FLOAT"); return FLOAT; }
-"DATE"          { yylval = new AstKeyword(DATE, "DATE"); return DATE; }
+"INT"           { yylval = new AstKeyword(INTTYPE, "INT"); return INTTYPE; }
+"CHAR"          { yylval = new AstKeyword(CHARTYPE, "CHAR"); return CHARTYPE; }
+"VARCHAR"       { yylval = new AstKeyword(VARCHARTYPE, "VARCHAR"); return VARCHARTYPE; }
+"FLOAT"         { yylval = new AstKeyword(FLOATTYPE, "FLOAT"); return FLOATTYPE; }
+"DATE"          { yylval = new AstKeyword(DATETYPE, "DATE"); return DATETYPE; }
 "PRIMARY"       { yylval = new AstKeyword(PRIMARY, "PRIMARY"); return PRIMARY; }
 "FOREIGN"       { yylval = new AstKeyword(FOREIGN, "FOREIGN"); return FOREIGN; }
 "KEY"           { yylval = new AstKeyword(KEY, "KEY"); return KEY; }
@@ -55,8 +55,8 @@ WHITESPACE      ([ \t]+)
 "OR"            { yylval = new AstKeyword(OR, "OR"); return OR; }
 "IS"            { yylval = new AstKeyword(IS, "IS"); return IS; }
 
-{INTEGER}       { yylval = new AstLiteral(yytext, L_INT); return LITERAL; }
-{DECIMAL}       { yylval = new AstLiteral(yytext, L_DECIMAL); return LITERAL; }
+{INTEGER_VAL}   { yylval = new AstLiteral(yytext, L_INT); return LITERAL; }
+{DECIMAL_VAL}   { yylval = new AstLiteral(yytext, L_DECIMAL); return LITERAL; }
 
 <INITIAL>"'"    { BEGIN(STR); builder.clear(); }
 <STR>{NEWLINE}  { yyerror("newline not allowed in string"); }

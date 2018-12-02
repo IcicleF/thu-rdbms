@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "ast.h"
+#include "parser/ast.h"
 
 int yylex();
 void yyerror(const char*);

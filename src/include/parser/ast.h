@@ -3,7 +3,7 @@
 
 #include <cstring>
 #include <iostream>
-#include "ast_base.h"
+#include "parser/ast_base.h"
 
 class AstKeyword : public AstBase {
     public:

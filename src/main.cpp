@@ -9,6 +9,9 @@
 #include <iostream>
 #include <cstring>
 
+#include "parser.tab.hpp"
+#include "parser/parser_base.h"
+
 using namespace std;
 
 void test1(FileManager* fm, BufPageManager* bpm) {
@@ -116,7 +119,9 @@ int main() {
     BufPageManager *bpm = new BufPageManager(fm);
 
     // test1(fm, bpm);
-    test2(fm, bpm);
-    
+    // test2(fm, bpm);
+
+    yyparse();
+
     return 0;
 }
