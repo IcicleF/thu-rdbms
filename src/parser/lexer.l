@@ -2,6 +2,8 @@
 %{
     #include "parser_base.h"
     #include "parser.tab.h"
+
+    std::string builder;
 %}
 
 NEWLINE         (\r|\n|\r\n)
@@ -9,10 +11,15 @@ DIGIT           ([0-9])
 INTEGER         ({DIGIT}+)
 DECIMAL         ({INTEGER}"."{INTEGER})
 IDENTIFIER      ([A-Za-z][_0-9A-Za-z]*)
-STRING          ('[^']*')
 WHITESPACE      ([ \t]+)
 
+%x STR
+
 %%
+
+{NEWLINE}       { }
+{WHITESPACE}    { }
+
 
 "DATABASE"      { yylval = new AstKeyword(DATABASE, "DATABASE"); return DATABASE; }
 "DATABASES"     { yylval = new AstKeyword(DATABASES, "DATABASES"); return DATABASES; }
@@ -50,7 +57,14 @@ WHITESPACE      ([ \t]+)
 
 {INTEGER}       { yylval = new AstLiteral(yytext, L_INT); return LITERAL; }
 {DECIMAL}       { yylval = new AstLiteral(yytext, L_DECIMAL); return LITERAL; }
-{STRING}        { yylval = new AstLiteral(yytext, L_STRING); return LITERAL; }
+
+<INITIAL>"'"    { BEGIN(STR); builder.clear(); }
+<STR>{NEWLINE}  { yyerror("newline not allowed in string"); }
+<STR><<EOF>>    { yyerror("unterminated string"); }
+<STR>"'"        { BEGIN(INITIAL); yylval = new AstLiteral(builder.c_str(), L_STRING); return LITERAL; }
+<STR>"\\'"      { builder += '\''; }
+<STR>"\\\\"     { builder += '\\'; }
+<STR>.          { builder += yytext; }
 
 "("             { yylval = new AstOper('('); return '('; }
 ")"             { yylval = new AstOper(')'); return ')'; }
@@ -68,9 +82,6 @@ WHITESPACE      ([ \t]+)
 "<>"            { yylval = new AstOper(NOT_EQ); return NOT_EQ; }
 
 {IDENTIFIER}    { yylval = new AstIdentifier(yytext); return IDENTIFIER; }
-
-{NEWLINE}       { }
-{WHITESPACE}    { }
 
 .               { issueError(yytext); }
 

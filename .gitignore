@@ -39,6 +39,8 @@ CMakeCache.txt
 Makefile
 
 # Others
+*.sql
+*.ast
 *.index
 log.txt
 *gen.txt

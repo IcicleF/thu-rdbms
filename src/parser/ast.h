@@ -49,7 +49,7 @@ class AstLiteral : public AstBase {
                     break;
                 case L_STRING:
                     this->strval = new char[len + 5];
-                    strncpy(this->strval, val + 1, len - 2);
+                    strcpy(this->strval, val);
                     break;
                 default:
                     break;
