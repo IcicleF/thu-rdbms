@@ -7,7 +7,7 @@
 NEWLINE         (\r|\n|\r\n)
 DIGIT           ([0-9])
 INTEGER         ({DIGIT}+)
-DECIMAL         ({INTEGER}"."{INTEGER}"f")
+DECIMAL         ({INTEGER}"."{INTEGER})
 IDENTIFIER      ([A-Za-z][_0-9A-Za-z]*)
 STRING          ('[^']*')
 WHITESPACE      ([ \t]+)

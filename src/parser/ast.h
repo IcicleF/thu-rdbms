@@ -37,7 +37,8 @@ class AstOper : public AstBase {
 
 class AstLiteral : public AstBase {
     public:
-        AstLiteral(char* val, int type) : AstBase(AST_LITERAL) {
+        AstLiteral(const char* val, int type) : AstBase(AST_LITERAL) {
+            int len = strlen(val);
             this->literalType = type;
             switch (type) {
                 case L_INT:
@@ -47,8 +48,8 @@ class AstLiteral : public AstBase {
                     this->floatval = (float)atof(val);
                     break;
                 case L_STRING:
-                    this->strval = new char[strlen(val) + 5];
-                    strcpy(this->strval, val);
+                    this->strval = new char[len + 5];
+                    strncpy(this->strval, val + 1, len - 2);
                     break;
                 default:
                     break;
@@ -89,7 +90,7 @@ class AstLiteral : public AstBase {
 
 class AstIdentifier : public AstBase {
     public:
-        AstIdentifier(char* val) : AstBase(AST_IDENTIFIER) {
+        AstIdentifier(const char* val) : AstBase(AST_IDENTIFIER) {
             this->strval = new char[strlen(val) + 5];
             strcpy(this->strval, val);
         }

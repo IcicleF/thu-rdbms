@@ -29,11 +29,9 @@
 
 Program:    StmtList {
                 $$ = new AstTopLevel($1);
-                std::cout << std::endl;
                 IdentPrinter* ip = new IdentPrinter();
                 $$->printTree(*ip);
                 delete ip;
-                std::cout << std::endl;
             };
 
 StmtList:   Stmt ';' {
@@ -46,46 +44,46 @@ StmtList:   Stmt ';' {
 Stmt:       SHOW DATABASES {
                 $$ = new AstShowDB();
             }|
-            SET IDENTIFIER '=' Value {
+            SET Ident '=' Value {
                 $$ = new AstSetParam($2, $4);
             }|
-            CREATE DATABASE IDENTIFIER {
+            CREATE DATABASE Ident {
                 $$ = new AstCreateDB($3);
             }|
-            DROP DATABASE IDENTIFIER {
+            DROP DATABASE Ident {
                 $$ = new AstDropDB($3);
             }|
-            USE IDENTIFIER {
+            USE Ident {
                 $$ = new AstUseDB($2);
             }|
             SHOW TABLES {
                 $$ = new AstShowTables();
             }|
-            CREATE TABLE IDENTIFIER '(' FieldList ')' {
+            CREATE TABLE Ident '(' FieldList ')' {
                 $$ = new AstCreateTable($3, $5);
             }|
-            DROP TABLE IDENTIFIER {
+            DROP TABLE Ident {
                 $$ = new AstDropTable($3);
             }|
-            DESC IDENTIFIER {
+            DESC Ident {
                 $$ = new AstDesc($2);
             }|
-            INSERT INTO IDENTIFIER VALUES ValLists {
+            INSERT INTO Ident VALUES ValLists {
                 $$ = new AstInsert($3, $5);
             }|
-            DELETE FROM IDENTIFIER WhereIf {
+            DELETE FROM Ident WhereIf {
                 $$ = new AstDelete($3, $4);
             }|
-            UPDATE IDENTIFIER SET SetClause WhereIf {
+            UPDATE Ident SET SetClause WhereIf {
                 $$ = new AstUpdate($2, $4, $5);
             }|
             SELECT Selector FROM IdentList WhereIf {
                 $$ = new AstSelect($2, $4, $5);
             }|
-            CREATE INDEX IDENTIFIER '(' IDENTIFIER ')' {
+            CREATE INDEX Ident '(' Ident ')' {
                 $$ = new AstCreateIndex($3, $5);
             }|
-            DROP INDEX IDENTIFIER '(' IDENTIFIER ')' {
+            DROP INDEX Ident '(' Ident ')' {
                 $$ = new AstDropIndex($3, $5);
             };
 
@@ -96,16 +94,16 @@ FieldList:  Field {
                 $$ = new AstFieldList($1, $3);
             };
 
-Field:      IDENTIFIER Type NOT SQLNULL {
+Field:      Ident Type NOT SQLNULL {
                 $$ = new AstField($1, $2, true);
             }|
-            IDENTIFIER Type {
+            Ident Type {
                 $$ = new AstField($1, $2, false);
             }|
             PRIMARY KEY '(' IdentList ')' {
                 $$ = new AstPrimaryKeyDecl($4);
             }|
-            FOREIGN KEY '(' IDENTIFIER ')' REFERENCES IDENTIFIER '(' IDENTIFIER ')' {
+            FOREIGN KEY '(' Ident ')' REFERENCES Ident '(' Ident ')' {
                 $$ = new AstForeignKeyDecl($4, $7, $9);
             };
 
@@ -183,10 +181,10 @@ WhClause:   WhClause AND WhClause {
                 $$ = new AstWhereClause($1, NULL, WHERE_IS_NOT_NULL);
             };
 
-Col:        IDENTIFIER {
+Col:        Ident {
                 $$ = new AstCol(NULL, $1);
             }|
-            IDENTIFIER '.' IDENTIFIER {
+            Ident '.' Ident {
                 $$ = new AstCol($1, $3);
             };
 
@@ -212,7 +210,7 @@ SetClause:  SetSingle {
                 $$ = new AstSetClause($1, $3);
             };
 
-SetSingle:  IDENTIFIER '=' Value {
+SetSingle:  Ident '=' Value {
                 $$ = new AstSet($1, $3);
             };
 
@@ -230,9 +228,14 @@ ColList:    Col {
                 $$ = new AstColList($1, $3);
             };
 
-IdentList:  IDENTIFIER {
+IdentList:  Ident {
                 $$ = new AstIdentList(NULL, $1);
             }|
-            IdentList ',' IDENTIFIER {
+            IdentList ',' Ident {
                 $$ = new AstIdentList($1, $3);
+            };
+
+Ident:      IDENTIFIER|
+            DATE {
+                $$ = new AstIdentifier("date");
             };
