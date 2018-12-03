@@ -8,15 +8,19 @@
 
 * CREATE DATABASE
 * CREATE TABLE
+* USE
+* SHOW DATABASES/SHOW TABLES
+* DESC
+
+FOREIGN KEY REFERENCE 到复合的主键上的情况不考虑。
 
 #### CREATE TABLE 数据类型
 
 * INT
 * FLOAT
 * CHAR
-* DECIMAL (可选)
-* VARCHAR (可选)
-* DATE (可选)
+* DATE
+* VARCHAR
 
 #### CREATE TABLE 约束
 
@@ -25,8 +29,6 @@
 * FOREIGN KEY (部分)
   * 参照完整性约束
 * NOT NULL
-* CHECK (部分)
-  * 域完整性约束
 
 ### DML
 
@@ -35,20 +37,11 @@
 * DELETE
 * UPDATE
 
-注意这部分实际上有诸多功能需要实现，例如：
+注意这部分有诸多功能都**不**需要实现，例如：
 
-* SELECT 嵌套
-* DISTINCT
-* ORDER BY
-* GROUP BY
-* 聚集函数
+* SELECT 嵌套：不用实现
+* DISTINCT：不用实现
+* ORDER BY：不用实现
+* GROUP BY：不用实现
+* 聚集函数：不用实现
 
-(待扩充)
-
-### 其他
-
-应当至少支持下列来自 MySQL 的语句：
-
-* USE
-* SHOW (DATABASES 或 TABLES)
-* DESCRIBE
