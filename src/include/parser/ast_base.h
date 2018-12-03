@@ -3,10 +3,12 @@
 
 #include <any>
 #include <vector>
-#include "identprinter.h"
+#include <iostream>
+#include "parser/IdentPrinter.h"
+#include "parser/SemRecorder.h"
 
 class AstBase {
-    protected:
+    public:
         int type;
         union {
             int val;
@@ -16,7 +18,14 @@ class AstBase {
     
     public:
         AstBase(int type = 0) : type(type) { }
-        virtual void printTree(IdentPrinter&) = 0;
+        
+        // 打印抽象语法树
+        virtual void printTree(IdentPrinter&) const = 0;
+        
+        // 执行语义检查
+        virtual bool checkSemantic(SemRecorder&) const = 0;
+        
+        // 运行语句并返回结果
         virtual std::any eval() {
             return std::any();
         }
@@ -76,7 +85,8 @@ const int TYPE_FLOAT = TYPE_DATE + 1;
 const int WHERE_AND = 3000;
 const int WHERE_OR = WHERE_AND + 1;
 const int WHERE_EQ = WHERE_OR + 1;
-const int WHERE_LT = WHERE_EQ + 1;
+const int WHERE_NOT = WHERE_EQ + 1;
+const int WHERE_LT = WHERE_NOT + 1;
 const int WHERE_GT = WHERE_LT + 1;
 const int WHERE_NE = WHERE_GT + 1;
 const int WHERE_LE = WHERE_NE + 1;

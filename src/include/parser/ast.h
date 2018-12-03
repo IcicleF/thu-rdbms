@@ -11,14 +11,17 @@ class AstKeyword : public AstBase {
             this->val = code;
             this->name = name;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("keyword: " + name);
         }
-        std::string toString() {
+        std::string toString() const {
             return name;
         }
 
-    protected:
+    public:
         std::string name;
 };
 
@@ -27,10 +30,13 @@ class AstOper : public AstBase {
         AstOper(int code) : AstBase(AST_OPER) {
             this->val = code;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("oper: " + (char)val);
         }
-        std::string toString() {
+        std::string toString() const {
             return "" + (char)val;
         }
 };
@@ -55,7 +61,10 @@ class AstLiteral : public AstBase {
                     break;
             }
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             std::string s = "literal ";
             switch (literalType) {
                 case L_INT:
@@ -72,7 +81,7 @@ class AstLiteral : public AstBase {
             }
             ip.writeln(s);
         }
-        std::string toString() {
+        std::string toString() const {
             switch (literalType) {
                 case L_INT:
                     return std::to_string(val);
@@ -84,7 +93,7 @@ class AstLiteral : public AstBase {
             return "unknown";
         }
 
-    protected:
+    public:
         int literalType;
 };
 
@@ -94,8 +103,14 @@ class AstIdentifier : public AstBase {
             this->strval = new char[strlen(val) + 5];
             strcpy(this->strval, val);
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("identifier: " + std::string(strval));
+        }
+        std::string toString() const {
+            return std::string(this->strval);
         }
 };
 
@@ -104,11 +119,14 @@ class AstTopLevel : public AstBase {
         AstTopLevel(AstBase* stmtList) : AstBase(AST_TOPLEVEL) {
             this->stmtList = stmtList;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return stmtList->checkSemantic(sm);
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             stmtList->printTree(ip);
         }
 
-    protected:
+    public:
         AstBase* stmtList;
 };
 
@@ -119,7 +137,13 @@ class AstStmtList : public AstBase {
                 this->stmtList = dynamic_cast<AstStmtList*>(ex)->stmtList;
             this->stmtList.push_back(rightmost);
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            for (auto f : stmtList)
+                if (!f->checkSemantic(sm))
+                    return false;
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("program");
             ip.ident();
             for (auto f : stmtList)
@@ -127,14 +151,17 @@ class AstStmtList : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         std::vector<AstBase*> stmtList;
 };
 
 class AstShowDB : public AstBase {
     public:
         AstShowDB() : AstBase(AST_SHOWDB) { }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("show databases");
         }
 };
@@ -145,7 +172,11 @@ class AstSetParam : public AstBase {
             this->param = param;
             this->pval = val;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            // now we do not set any system params
+            return false;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("set system parameter");
             ip.ident();
             param->printTree(ip);
@@ -153,7 +184,7 @@ class AstSetParam : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         AstBase* param;
         AstBase* pval;
 };
@@ -163,14 +194,17 @@ class AstCreateDB : public AstBase {
         AstCreateDB(AstBase* name) : AstBase(AST_CREATEDB) {
             this->name = name;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("create database");
             ip.ident();
             name->printTree(ip);
             ip.deident();
         }
     
-    protected:
+    public:
         AstBase* name;
 };
 
@@ -179,14 +213,17 @@ class AstDropDB : public AstBase {
         AstDropDB(AstBase* name) : AstBase(AST_DROPDB) {
             this->name = name;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("drop database");
             ip.ident();
             name->printTree(ip);
             ip.deident();
         }
     
-    protected:
+    public:
         AstBase* name;
 };
 
@@ -195,21 +232,27 @@ class AstUseDB : public AstBase {
         AstUseDB(AstBase* name) : AstBase(AST_USEDB) {
             this->name = name;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("use database");
             ip.ident();
             name->printTree(ip);
             ip.deident();
         }
     
-    protected:
+    public:
         AstBase* name;
 };
 
 class AstShowTables : public AstBase {
     public:
         AstShowTables() : AstBase(AST_SHOWTABLES) { }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("show tables");
         }
 };
@@ -220,7 +263,10 @@ class AstCreateTable : public AstBase {
             this->name = name;
             this->fieldList = fieldList;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return fieldList->checkSemantic(sm);
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("create table");
             ip.ident();
             name->printTree(ip);
@@ -228,7 +274,7 @@ class AstCreateTable : public AstBase {
             ip.deident();
         }
 
-    protected:
+    public:
         AstBase* name;
         AstBase* fieldList;
 };
@@ -238,14 +284,17 @@ class AstDropTable : public AstBase {
         AstDropTable(AstBase* name) : AstBase(AST_DROPTABLE) {
             this->name = name;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("drop table");
             ip.ident();
             name->printTree(ip);
             ip.deident();
         }
     
-    protected:
+    public:
         AstBase* name;
 };
 
@@ -254,14 +303,17 @@ class AstDesc : public AstBase {
         AstDesc(AstBase* name) : AstBase(AST_DESC) {
             this->name = name;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("describe table");
             ip.ident();
             name->printTree(ip);
             ip.deident();
         }
     
-    protected:
+    public:
         AstBase* name;
 };
 
@@ -271,7 +323,10 @@ class AstInsert : public AstBase {
             this->table = table;
             this->valList = valList;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return valList->checkSemantic(sm);
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("insert");
             ip.ident();
             table->printTree(ip);
@@ -279,7 +334,7 @@ class AstInsert : public AstBase {
             ip.deident();
         }
 
-    protected:
+    public:
         AstBase* table;
         AstBase* valList;
 };
@@ -290,7 +345,10 @@ class AstDelete : public AstBase {
             this->table = table;
             this->whereClause = whereClause;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return whereClause == NULL || whereClause->checkSemantic(sm);
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("delete");
             ip.ident();
             table->printTree(ip);
@@ -301,7 +359,7 @@ class AstDelete : public AstBase {
             ip.deident();
         }
 
-    protected:
+    public:
         AstBase* table;
         AstBase* whereClause;
 };
@@ -313,7 +371,10 @@ class AstUpdate : public AstBase {
             this->setClause = setClause;
             this->whereClause = whereClause;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return setClause->checkSemantic(sm) && (whereClause == NULL || whereClause->checkSemantic(sm));
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("update");
             ip.ident();
             table->printTree(ip);
@@ -325,7 +386,7 @@ class AstUpdate : public AstBase {
             ip.deident();
         }
 
-    protected:
+    public:
         AstBase* table;
         AstBase* setClause;
         AstBase* whereClause;
@@ -338,7 +399,10 @@ class AstSelect : public AstBase {
             this->tableList = tableList;
             this->whereClause = whereClause;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return whereClause == NULL || whereClause->checkSemantic(sm);
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("select");
             ip.ident();
             selector->printTree(ip);
@@ -350,7 +414,7 @@ class AstSelect : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         AstBase* selector;
         AstBase* tableList;
         AstBase* whereClause;
@@ -362,7 +426,10 @@ class AstCreateIndex : public AstBase {
             this->table = table;
             this->colName = colName;
         }
-        virtual void printTree(IdentPrinter& ip) { 
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const { 
             ip.writeln("create index");
             ip.ident();
             table->printTree(ip);
@@ -370,7 +437,7 @@ class AstCreateIndex : public AstBase {
             ip.deident();
         }
 
-    protected:
+    public:
         AstBase* table;
         AstBase* colName;
 };
@@ -381,7 +448,10 @@ class AstDropIndex : public AstBase {
             this->table = table;
             this->colName = colName;
         }
-        virtual void printTree(IdentPrinter& ip) { 
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const { 
             ip.writeln("drop index");
             ip.ident();
             table->printTree(ip);
@@ -389,7 +459,7 @@ class AstDropIndex : public AstBase {
             ip.deident();
         }
 
-    protected:
+    public:
         AstBase* table;
         AstBase* colName;
 };
@@ -401,7 +471,15 @@ class AstFieldList : public AstBase {
                 this->fieldList = dynamic_cast<AstFieldList*>(ex)->fieldList;
             this->fieldList.push_back(rightmost);
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            sm.beginField();
+            for (auto f : fieldList)
+                if (!f->checkSemantic(sm))
+                    return false;
+            sm.endField();
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("field list");
             ip.ident();
             for (auto f : fieldList)
@@ -409,7 +487,7 @@ class AstFieldList : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         std::vector<AstBase*> fieldList;
 };
 
@@ -420,7 +498,12 @@ class AstField : public AstBase {
             this->ftype = type;
             this->isNotNull = isNotNull;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            if (!sm.push(dynamic_cast<AstIdentifier*>(name)->toString()))
+                return false;
+            return ftype->checkSemantic(sm);
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("field");
             ip.ident();
             name->printTree(ip);
@@ -430,7 +513,7 @@ class AstField : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         AstBase* name;
         AstBase* ftype;
         bool isNotNull;
@@ -441,14 +524,17 @@ class AstPrimaryKeyDecl : public AstBase {
         AstPrimaryKeyDecl(AstBase* colList) : AstBase(AST_PRIMKEYDECL) {
             this->colList = colList;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return colList->checkSemantic(sm);
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("primary key declaration");
             ip.ident();
             colList->printTree(ip);
             ip.deident();
         }
     
-    protected:
+    public:
         AstBase* colList;
 };
 
@@ -459,7 +545,10 @@ class AstForeignKeyDecl : public AstBase {
             this->ref = ref;
             this->refColName = refColName;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return sm.check(dynamic_cast<AstIdentifier*>(colName)->toString());
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("foreign key declaration");
             ip.ident();
             colName->printTree(ip);
@@ -468,7 +557,7 @@ class AstForeignKeyDecl : public AstBase {
             ip.deident();
         }
 
-    protected:
+    public:
         AstBase* colName;
         AstBase* ref;
         AstBase* refColName;
@@ -480,7 +569,35 @@ class AstType : public AstBase {
             this->val = typeId;
             this->len = len;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            int v;
+            if (len != NULL) {
+                AstLiteral* ptr = dynamic_cast<AstLiteral*>(len);
+                if (ptr->literalType != L_INT)
+                    return false;
+                v = ptr->val;
+            }
+            switch (val) {
+                case TYPE_INT:
+                    if (v < 1 || v > 10) {
+                        std::cout << "int size should be in 1~11 instead of " << v << std::endl;
+                        return false;
+                    }
+                    return true;
+                case TYPE_CHAR:
+                case TYPE_VARCHAR:
+                    if (v < 1 || v > 255) {
+                        std::cout << "string size should be in 1~255 instead of " << v << std::endl;
+                        return false;
+                    }
+                    return true;
+                case TYPE_FLOAT:
+                case TYPE_DATE:
+                    return true;
+            }
+            return false;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             std::string s = "type: ", lens = (len != NULL ? dynamic_cast<AstLiteral*>(len)->toString() : "");
             switch (val) {
                 case TYPE_INT:
@@ -504,7 +621,7 @@ class AstType : public AstBase {
             ip.writeln(s);
         }
 
-    protected:
+    public:
         AstBase* len;
 };
 
@@ -515,7 +632,10 @@ class AstValLists : public AstBase {
                 this->valLists = dynamic_cast<AstValLists*>(ex)->valLists;
             this->valLists.push_back(rightmost);
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("value lists");
             ip.ident();
             for (auto f : valLists)
@@ -523,7 +643,7 @@ class AstValLists : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         std::vector<AstBase*> valLists;
 };
 
@@ -534,7 +654,10 @@ class AstValList : public AstBase {
                 this->valList = dynamic_cast<AstValList*>(ex)->valList;
             this->valList.push_back(rightmost);
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("vallist");
             ip.ident();
             for (auto f : valList)
@@ -542,7 +665,7 @@ class AstValList : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         std::vector<AstBase*> valList;
 };
 
@@ -553,7 +676,10 @@ class AstWhereClause : public AstBase {
             this->rhs = rhs;
             this->val = opId;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             switch (val) {
                 case WHERE_AND:
                     ip.writeln("where and of");
@@ -561,8 +687,11 @@ class AstWhereClause : public AstBase {
                 case WHERE_OR:
                     ip.writeln("where or of");
                     break;
+                case WHERE_NOT:
+                    ip.writeln("where not");
+                    break;
                 case WHERE_EQ:
-                    ip.writeln("where ==");
+                    ip.writeln("where =");
                     break;
                 case WHERE_GE:
                     ip.writeln("where >=");
@@ -595,7 +724,7 @@ class AstWhereClause : public AstBase {
             ip.deident();
         }
 
-    protected:
+    public:
         AstBase* lhs;
         AstBase* rhs;
 };
@@ -606,7 +735,10 @@ class AstCol : public AstBase {
             this->owner = owner;
             this->colName = colName;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("column");
             ip.ident();
             if (owner != NULL)
@@ -617,7 +749,7 @@ class AstCol : public AstBase {
             ip.deident();
         }
 
-    protected:
+    public:
         AstBase* owner;
         AstBase* colName;
 };
@@ -629,7 +761,13 @@ class AstExpr : public AstBase {
             this->rhs = rhs;
             this->val = opId;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            sm.beginExpr();
+            bool res = lhs->checkSemantic(sm) && (rhs == NULL || rhs->checkSemantic(sm));
+            sm.endExpr();
+            return res;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             switch (val) {
                 case EXPR_ADD:
                     ip.writeln("add");
@@ -650,7 +788,7 @@ class AstExpr : public AstBase {
             ip.deident();
         }
 
-    protected:
+    public:
         AstBase* lhs;
         AstBase* rhs;
 };
@@ -662,7 +800,10 @@ class AstSetClause : public AstBase {
                 this->setList = dynamic_cast<AstSetClause*>(ex)->setList;
             this->setList.push_back(rightmost);
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("set clause");
             ip.ident();
             for (auto f : setList)
@@ -670,7 +811,7 @@ class AstSetClause : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         std::vector<AstBase*> setList;
 };
 
@@ -680,7 +821,10 @@ class AstSet : public AstBase {
             this->colName = colName;
             this->sval = val;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("set");
             ip.ident();
             colName->printTree(ip);
@@ -688,7 +832,7 @@ class AstSet : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         AstBase* colName;
         AstBase* sval;
 };
@@ -698,7 +842,10 @@ class AstSelector : public AstBase {
         AstSelector(AstBase* colList) : AstBase(AST_SELECTOR) {
             this->colList = colList;
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("selector");
             ip.ident();
             if (colList != NULL)
@@ -719,7 +866,13 @@ class AstColList : public AstBase {
                 this->colList = dynamic_cast<AstColList*>(ex)->colList;
             this->colList.push_back(rightmost);
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            for (auto f : colList)
+                if (!f->checkSemantic(sm))
+                    return false;
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("column list");
             ip.ident();
             for (auto f : colList)
@@ -727,7 +880,7 @@ class AstColList : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         std::vector<AstBase*> colList;
 };
 
@@ -738,7 +891,16 @@ class AstIdentList : public AstBase {
                 this->identList = dynamic_cast<AstIdentList*>(ex)->identList;
             this->identList.push_back(rightmost);
         }
-        virtual void printTree(IdentPrinter& ip) {
+        virtual bool checkSemantic(SemRecorder& sm) const {
+            if (sm.isInField())
+                for (auto f : identList) {
+                    std::string ident = dynamic_cast<AstIdentifier*>(f)->toString();
+                    if (!sm.check(ident))
+                        return false;
+                }
+            return true;
+        }
+        virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("identifier list");
             ip.ident();
             for (auto f : identList)
@@ -746,7 +908,7 @@ class AstIdentList : public AstBase {
             ip.deident();
         }
     
-    protected:
+    public:
         std::vector<AstBase*> identList;
 };
 

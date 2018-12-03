@@ -1,5 +1,5 @@
-#ifndef PARSER_IDENTPRINTER
-#define PARSER_IDENTPRINTER
+#ifndef PARSER_IDENTPRINTER_H
+#define PARSER_IDENTPRINTER_H
 
 #include <string>
 

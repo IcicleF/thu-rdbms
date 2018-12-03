@@ -49,6 +49,7 @@ test*
 lex.yy.cpp
 parser.tab.hpp
 parser.tab.cpp
+database/*
 
 # Misc
 .DS_Store

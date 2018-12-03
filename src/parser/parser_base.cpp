@@ -6,6 +6,6 @@ void yyerror(const char* text) {
 }
 
 void issueError(const char* text) {
-    std::cout << "Unrecognized char: ";
+    std::cout << "Unrecognized character: ";
     yyerror(text);
 }

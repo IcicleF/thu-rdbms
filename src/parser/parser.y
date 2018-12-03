@@ -1,5 +1,6 @@
 %define api.value.type { class AstBase* }
 %{
+    #include <cstdlib>
     #include "parser/parser_base.h"
 %}
 
@@ -19,7 +20,7 @@
 %nonassoc '=' NOT_EQ
 %nonassoc '<' '>' LESS_EQ GREATER_EQ
 %left '+' '-'
-%nonassoc UMINUS
+%nonassoc UMINUS NOT
 %nonassoc '.'
 %nonassoc ')'
 
@@ -29,9 +30,14 @@
 
 Program:    StmtList {
                 $$ = new AstTopLevel($1);
+                
+                SemRecorder* sm = new SemRecorder();
                 IdentPrinter* ip = new IdentPrinter();
+                if (!($$->checkSemantic(*sm)))
+                    exit(0);
                 $$->printTree(*ip);
                 delete ip;
+                delete sm;
             };
 
 StmtList:   Stmt ';' {
@@ -152,6 +158,9 @@ WhClause:   WhClause AND WhClause {
             }|
             WhClause OR WhClause {
                 $$ = new AstWhereClause($1, $3, WHERE_OR);
+            }|
+            NOT WhClause {
+                $$ = new AstWhereClause($2, NULL, WHERE_NOT);
             }|
             '(' WhClause ')' {
                 $$ = $2;
