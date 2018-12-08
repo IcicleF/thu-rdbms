@@ -33,18 +33,24 @@ dbmain
 *.app
 
 # CMake
-
 CMakeFiles/*
 cmake_install.cmake
 CMakeCache.txt
 Makefile
 
-# Temporary Storage
-temp/*
+# Others
+*.sql
+*.ast
+*.index
+log.txt
+*gen.txt
+temp*
+test*
+lex.yy.cpp
+parser.tab.hpp
+parser.tab.cpp
+database/*
 
-# Other Stuff
+# Misc
 .DS_Store
 .vscode/*
-
-# Database
-*.index

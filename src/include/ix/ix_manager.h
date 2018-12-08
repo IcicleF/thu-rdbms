@@ -6,6 +6,9 @@
 #include "pf/fileio/FileManager.h"
 #include "pf/utils/pagedef.h"
 
+#include <string>
+#include <map>
+
 class IXManager {
     FileManager *fm;
     BufPageManager *bpm;
@@ -19,6 +22,9 @@ class IXManager {
         int destroyIndex(const char*, int);
         IXHandler *openIndex(const char*, int);
         int closeIndex(IXHandler&);
+
+    private:
+        std::map<std::string, int> fileIds;
 };
 
 #endif // IX_MANAGER_H

@@ -9,6 +9,9 @@
 #include <iostream>
 #include <cstring>
 
+#include "parser.tab.hpp"
+#include "parser/parser_base.h"
+
 using namespace std;
 
 void test1(FileManager* fm, BufPageManager* bpm) {
@@ -72,7 +75,7 @@ void test2(FileManager* fm, BufPageManager* bpm) {
     inse("01z", 4, 239);
     cout << "success: 2" << endl;
 
-    inse("0", 122349, 16);
+    inse("0\0\0\0", 122349, 16);
     cout << "success: 3" << endl;
     
     inse("2122", 212, 44);
@@ -84,7 +87,20 @@ void test2(FileManager* fm, BufPageManager* bpm) {
     inse("wsgi", 23, 16);
     cout << "success: 6" << endl;
 
-    //ih->bpt->printTree();
+    inse("f*0k", 120, 10);
+    inse("f*1k", 121, 10);
+    inse("f*2k", 122, 10);
+    inse("f*3k", 123, 10);
+    inse("f*4k", 124, 10);
+    inse("f*5k", 125, 10);
+    /*
+    inse("f*6k", 126, 10);
+    inse("f*7k", 127, 10);
+    inse("f*8k", 128, 10);
+    cout << "success: f*0k ~ f*8k" << endl;
+    */
+
+    ih->bpt->printTree();
     cout << "Insert Test succeed ! " << endl;
 
     auto dele = [&](const char* s, int page, short slot) -> void {
@@ -103,7 +119,9 @@ int main() {
     BufPageManager *bpm = new BufPageManager(fm);
 
     // test1(fm, bpm);
-    test2(fm, bpm);
-    
+    // test2(fm, bpm);
+
+    yyparse();
+
     return 0;
 }
