@@ -80,6 +80,8 @@ bool MetaManager::createDatabase(AstCreateDB* ast) {
 
 bool MetaManager::dropDatabase(AstDropDB* ast) {
     std::string dbName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
+    if (dbName == workingDB)
+        workingDB.clear();
     return removeDirectory(("database/" + dbName).c_str()) == 0;
 }
 
@@ -111,6 +113,7 @@ bool MetaManager::useDatabase(AstUseDB* ast) {
     if (dir) {
         workingDB = dbName;
         closedir(dir);
+        return true;
     }
     else
         workingDB.clear();
@@ -120,20 +123,35 @@ bool MetaManager::useDatabase(AstUseDB* ast) {
 bool MetaManager::createTable(AstCreateTable* ast) {
     string dbName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
     string dbDir = "database/" + dbName;
-    if (!ensureDirectory(dbDir.c_str()))
-        return false;
-    vector<AstBase*>& fieldList = dynamic_cast<AstFieldList*>(ast->fieldList)->fieldList;
-    for (AstBase* bf : fieldList) {
-        AstField* field = dynamic_cast<AstField*>(bf);
-
-        string name = dynamic_cast<AstIdentifier*>(field->name)->toString();
-        AstType* typ = dynamic_cast<AstType*>(field->ftype);
-        bool isNotNull = field->isNotNull;
-
-        // todo
-    }
+    //...
 }
 
-// Placeholder
-bool MetaManager::dropTable(AstDropTable* ast) { return true; }
-vector<string> MetaManager::showTables() { return vector<string>(); }
+bool MetaManager::dropTable(AstDropTable* ast) {
+    string dbName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
+}
+
+bool MetaManager::showTables(vector<string>& res) {
+    if (workingDB.length() == 0) {
+        res.clear();
+        return false;
+    }
+    string dbDir = "database/" + workingDB;
+
+    DIR* dir = opendir(dbDir.c_str());
+    int r = 0;
+    if (dir) {
+        dirent* p;
+        while (!r && (p = readdir(dir))) {
+            if (!strcmp(p->d_name, ".") && !strcmp(p->d_name, ".."))
+                continue;
+            string subdir = "database/";
+            subdir += p->d_name;
+            struct stat sbuf;
+            if (!stat(subdir.c_str(), &sbuf))
+                if (S_ISDIR(sbuf.st_mode))
+                    res.push_back(string(p->d_name));
+        }
+        closedir(dir);
+    }
+    return true;
+}
