@@ -41,7 +41,8 @@ class MetaManager {
         // 表相关的内部接口
         bool createTable(AstCreateTable*);
         bool dropTable(AstDropTable*);
-        std::vector<std::string> showTables();
+        bool showTables(std::vector<std::string>&);
+        bool descTable(AstDesc*);
 };
 
 #endif
