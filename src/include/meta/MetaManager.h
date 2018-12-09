@@ -10,6 +10,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 #include "parser/ast.h"
 
