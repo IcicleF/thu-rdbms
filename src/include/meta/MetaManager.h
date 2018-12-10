@@ -44,6 +44,8 @@ class MetaManager {
         bool dropTable(AstDropTable*);
         bool showTables(std::vector<std::string>&);
         bool descTable(AstDesc*);
+        bool createIndex(AstCreateIndex*);
+        bool dropIndex(AstDropIndex*);
 };
 
 #endif

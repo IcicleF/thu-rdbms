@@ -145,18 +145,23 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     collist.clear();
     int colnum = 0;
     for (auto f : tfl->fieldList){
-        if (f->type == AST_FIELD)colnum++;
+        if (f->type == AST_FIELD || f->type == AST_FOREKEYDECL)colnum++;
     }
     
     ctable << colnum << endl;//all col ident
+
     for (auto f : tfl->fieldList){
         if (f->type == AST_FIELD){
             tempident = dynamic_cast<AstIdentifier*>(dynamic_cast<AstField*>(f)->name)->toString();
             ctable << tempident << " ";
             collist.push_back(tempident);
         }
+        if (f->type == AST_FOREKEYDECL){
+            tempident = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->colName)->toString();
+            ctable << tempident << " ";
+        }
     }
-
+    ctable << endl;
     bool pcheck = true;
     bool exist;
 
@@ -167,6 +172,9 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     for (auto f : tfl->fieldList){
         ctable << f->type << " ";//fieldtype
         if(f->type == AST_FIELD){//field
+            tempident = dynamic_cast<AstIdentifier*>(dynamic_cast<AstField*>(f)->name)->toString();
+            ctable << tempident << " ";
+
             temptype = dynamic_cast<AstType*>(dynamic_cast<AstField*>(f)->ftype);
             ctable << temptype->val << " ";//type
             if(dynamic_cast<AstField*>(f)->isNotNull == true){
@@ -218,7 +226,7 @@ bool MetaManager::createTable(AstCreateTable* ast) {
             ctable << endl;
         }
     }
-
+    ctable.close();
     if(pcheck == false){
         remove(MetaName.c_str());
         return false;
@@ -278,5 +286,162 @@ bool MetaManager::descTable(AstDesc *ast){
     ifstream ift;
     ift.open(metaname.c_str());
     if(!ift)return false;
+    string temp;
+    ift >> temp;
+    cout << "table name: " << temp << endl;
+    int fieldnum,colnum;
+    ift >> fieldnum;
+
+    ift >> colnum;
+    for (int i = 0; i < colnum; i++)ift>>temp;
+
+    int fieldtype,coltype,collen,prikeylen;
+
+    for(int i = 0; i < fieldnum; i++){
+        ift >> fieldtype;
+        if (fieldtype == AST_FIELD){
+            ift >> temp;
+            cout << temp << " ";//colname
+            ift >> coltype;
+            ift >> temp;//not null
+            if(coltype == TYPE_INT){
+                ift >> collen;
+                cout << "INT(" << collen << ") ";
+            }
+            if(coltype == TYPE_FLOAT){
+                cout << "FLOAT ";
+            }
+            if(coltype == TYPE_DATE){
+                cout << "DATE ";
+            }
+            if(coltype == TYPE_CHAR){
+                ift >> collen;
+                cout << "CHAR(" << collen <<") ";
+            }
+            if(coltype == TYPE_VARCHAR){
+                ift >> collen;
+                cout << "VARCHAR(" << collen << ") ";
+            }
+            if (temp[0] == 'T')cout << "NOT NULL";
+            cout << endl;
+        }
+        if (fieldtype == AST_PRIMKEYDECL){
+            cout << "PRIMARY KEY ( ";
+            ift >> prikeylen;
+            for (int i = 0; i < prikeylen; i++){
+                ift >> temp;
+                cout << temp << " ";
+            }
+            cout << ")" << endl;
+        }
+        if (fieldtype == AST_FOREKEYDECL){
+            cout << "FOREIGN KEY ";
+            ift >> temp;
+            cout << temp;
+            cout << " REFERENCES ";
+            ift >> temp;
+            cout << temp << " ";
+            ift >> temp;
+            cout << " ( " << temp << " )" << endl;
+        }
+    }
+    ift.close();
+}
+
+bool MetaManager::createIndex(AstCreateIndex* ast)
+{
+    string tablename,colname;
+    if (workingDB.length() == 0) return false;
+    tablename = dynamic_cast<AstIdentifier*>(ast->table)->toString();
+    colname = dynamic_cast<AstIdentifier*>(ast->colName)->toString();
+    string tabledir,indexdir,metadir;
+    tabledir = "database/" + workingDB + "/" + tablename;
+    indexdir = tabledir + "/index.txt";
+    metadir = tabledir + "/meta.txt";
+
+    ifstream ift;
+    ofstream oft;
     
+    int indexnum;
+    vector<string> indices;
+    indices.clear();
+    string temp;
+
+    ift.open(indexdir.c_str());
+    if (!ift)indexnum = 0;
+    else{
+        ift >> indexnum;
+        for (int i = 0; i < indexnum; i++){
+            ift >> temp;
+            indices.push_back(temp);
+        }
+    }
+    ift.close();
+
+    bool exist = false;
+    ift.open(metadir.c_str());
+    if(!ift)return false;
+    ift >> temp;
+    int colnum;
+    ift >> colnum >> colnum;
+    for (int i = 0 ; i < colnum; i++){
+        ift >> temp;
+        if (colname == temp)exist = true;
+    }
+    ift.close();
+    if (exist == false) return false;
+    
+    indices.push_back(colname);
+    indexnum++;
+    oft.open(indexdir.c_str());
+    oft << indexnum << endl;
+    for(int i = 0; i < indexnum; i++){
+        oft << indices[i] << endl;
+    }
+    oft.close();
+    return true;
+}
+
+bool MetaManager::dropIndex(AstDropIndex* ast){
+    string tablename,colname;
+    if (workingDB.length() == 0) return false;
+    tablename = dynamic_cast<AstIdentifier*>(ast->table)->toString();
+    colname = dynamic_cast<AstIdentifier*>(ast->colName)->toString();
+    string tabledir,indexdir,metadir;
+    tabledir = "database/" + workingDB + "/" + tablename;
+    indexdir = tabledir + "/index.txt";
+    metadir = tabledir + "/meta.txt";
+
+    ifstream ift;
+    ofstream oft;
+    
+    int indexnum;
+    vector<string> indices;
+    indices.clear();
+    string temp;
+    bool exist = false;
+
+    ift.open(indexdir.c_str());
+    if (!ift)indexnum = 0;
+    else{
+        ift >> indexnum;
+        for (int i = 0; i < indexnum; i++){
+            ift >> temp;
+            if (temp == colname){
+                exist = true;
+                indexnum--;
+            }
+            else indices.push_back(temp);
+        }
+    }
+    ift.close();
+    if(exist == false)return false;
+
+    oft.open(indexdir.c_str());
+    oft << indexnum << endl;
+    for(int i = 0; i < indexnum; i++){
+        oft << indices[i] << endl;
+    }
+    oft.close();
+    return true; 
 }
