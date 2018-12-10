@@ -267,10 +267,7 @@ bool MetaManager::showTables(vector<string>& res) {
         closedir(dir);
         return true;
     }
-<<<<<<< HEAD
     return false;
-=======
-    return true;
 }
 
 bool MetaManager::descTable(AstDesc *ast){
@@ -282,5 +279,4 @@ bool MetaManager::descTable(AstDesc *ast){
     ift.open(metaname.c_str());
     if(!ift)return false;
     
->>>>>>> 4a0eba53f444a2460fbd4c66b57bb4f2bc5cd8a0
 }
