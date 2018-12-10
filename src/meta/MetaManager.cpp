@@ -123,13 +123,127 @@ bool MetaManager::useDatabase(AstUseDB* ast) {
 }
 
 bool MetaManager::createTable(AstCreateTable* ast) {
-    string dbName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
-    string dbDir = "database/" + dbName;
+    if (workingDB.length() == 0)return false;
+
+    string tableName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
+    string tableDir = "database/" + workingDB + "/" + tableName;
+    string MetaName = tableDir + "/meta.txt";
+    bool ret = ensureDirectory(tableDir.c_str());
+    if (ret == false) return false;
+
+    ofstream ctable;
+    ctable.open(MetaName.c_str());
+    
+    ctable << tableName << endl;//tablename
+
+    AstType *temptype;
+    AstFieldList *tfl = dynamic_cast<AstFieldList*>(ast->fieldList);
+    AstIdentList *til;
+    string tempident;
+
+    ctable << tfl->fieldList.size() << endl;//fieldnum
+
+    vector<string> collist;
+    collist.clear();
+    int colnum = 0;
+    for (auto f : tfl->fieldList){
+        if (f->type == AST_FIELD)colnum++;
+    }
+    
+    ctable << colnum << endl;//all col ident
+    for (auto f : tfl->fieldList){
+        if (f->type == AST_FIELD){
+            tempident = dynamic_cast<AstIdentifier*>(dynamic_cast<AstField*>(f)->name)->toString();
+            ctable << tempident << " ";
+            collist.push_back(tempident);
+        }
+    }
+
+    bool pcheck = true;
+    bool exist;
+
+    string Ref,RefCol;
+    string Temp;
+    int refcolnum;
+
+    for (auto f : tfl->fieldList){
+        ctable << f->type << " ";//fieldtype
+        if(f->type == AST_FIELD){//field
+            temptype = dynamic_cast<AstType*>(dynamic_cast<AstField*>(f)->ftype);
+            ctable << temptype->val << " ";//type
+            if(dynamic_cast<AstField*>(f)->isNotNull == true){
+                ctable << "T" << " ";//isNotNull
+            }
+            else{
+                ctable << "F" << " ";
+            }
+            if(temptype->val == TYPE_INT || temptype->val == TYPE_CHAR || temptype->val == TYPE_VARCHAR){
+                ctable << temptype->len << endl;//AttrLen
+            }
+        }
+        else if (f->type == AST_PRIMKEYDECL){
+            til = dynamic_cast<AstIdentList*>(dynamic_cast<AstPrimaryKeyDecl*>(f)->colList);
+            ctable << til->identList.size() << " ";//primary col num
+            for (auto id : til->identList){
+                tempident = dynamic_cast<AstIdentifier*>(id)->toString();
+                exist = false;
+                for (int i = 0; i < collist.size(); i++){
+                    if(tempident == collist[i])exist = true;
+                }
+                if (exist == false)pcheck = false;
+                ctable << tempident << " ";
+            }
+            ctable << endl;
+        }
+        else if (f->type == AST_FOREKEYDECL){
+            tempident = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->colName)->toString();
+            ctable << tempident << " ";
+
+            Ref = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->ref)->toString();
+            RefCol = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->refColName)->toString();
+
+            string Reftable = "database/" + workingDB + "/" + Ref + "/meta.txt";
+            ifstream iref(Reftable.c_str());
+            if(!iref)pcheck = false;
+            else{
+                ctable << Ref << " ";
+                ctable << RefCol << " ";
+                iref >> Temp;
+                iref >> refcolnum >> refcolnum;
+                exist = false;
+                for (int i = 0; i < refcolnum; i++){
+                    iref >> Temp;
+                    if(Temp == RefCol)exist = true;
+                }
+                if(exist == false)pcheck = false;
+            }
+            ctable << endl;
+        }
+    }
+
+    if(pcheck == false){
+        remove(MetaName.c_str());
+        return false;
+    }
+
+    return true;
+    /*
+    database/dbname/tablename/meta.txt
+    tableName
+    fieldNum
+    colNum
+    colName*
+    fieldtype ...*
+    */
     //...
 }
 
 bool MetaManager::dropTable(AstDropTable* ast) {
-    string dbName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
+    if (workingDB.length() == 0)return false;
+
+    string tableName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
+    string tableDir = "database/" + workingDB + "/" + tableName;
+    return removeDirectory(tableDir.c_str()) == 0;
 }
 
 bool MetaManager::showTables(vector<string>& res) {
@@ -153,5 +267,20 @@ bool MetaManager::showTables(vector<string>& res) {
         closedir(dir);
         return true;
     }
+<<<<<<< HEAD
     return false;
+=======
+    return true;
+}
+
+bool MetaManager::descTable(AstDesc *ast){
+    if (workingDB.length() == 0) return false;
+
+    string tablename = dynamic_cast<AstIdentifier*>(ast->name)->toString();
+    string metaname = "database/" + workingDB + "/" + tablename + "/meta.txt";
+    ifstream ift;
+    ift.open(metaname.c_str());
+    if(!ift)return false;
+    
+>>>>>>> 4a0eba53f444a2460fbd4c66b57bb4f2bc5cd8a0
 }
