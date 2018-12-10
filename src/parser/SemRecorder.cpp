@@ -44,13 +44,14 @@ bool SemRecorder::check(const string& ident) {
 }
 
 void SemRecorder::beginExpr() {
-    inExpr = true;
+    ++exprLayers;
 }
 
 void SemRecorder::endExpr() {
-    inExpr = false;
+    if (exprLayers > 0)
+        --exprLayers;
 }
 
 bool SemRecorder::isInExpr() {
-    return inExpr;
+    return exprLayers > 0;
 }

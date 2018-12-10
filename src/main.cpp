@@ -6,13 +6,16 @@
 #include "rm/rm_scanner.h"
 #include "ix/ix_manager.h"
 #include "ix/ix_handler.h"
+#include "parser.tab.hpp"
+#include "parser/parser_base.h"
+#include "global.h"
+
 #include <iostream>
 #include <cstring>
 
-#include "parser.tab.hpp"
-#include "parser/parser_base.h"
-
 using namespace std;
+
+Global* global;
 
 void test1(FileManager* fm, BufPageManager* bpm) {
     char dat[25];
@@ -121,6 +124,7 @@ int main() {
     // test1(fm, bpm);
     // test2(fm, bpm);
 
+    global = new Global();
     yyparse();
 
     return 0;

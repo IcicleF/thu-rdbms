@@ -1,6 +1,9 @@
 #include "meta/MetaManager.h"
+#include "global.h"
 
 using namespace std;
+
+extern Global* global;
 
 MetaManager::MetaManager() {
     ensureDirectory("database");
@@ -16,7 +19,7 @@ bool MetaManager::evalAst(AstBase* ast) {
         case AST_DROPDB:
             return dropDatabase(dynamic_cast<AstDropDB*>(ast));
         case AST_SHOWDB:
-            showDatabases();
+            global->strList = showDatabases();
             return true;
         case AST_USEDB:
             return useDatabase(dynamic_cast<AstUseDB*>(ast));
@@ -25,8 +28,7 @@ bool MetaManager::evalAst(AstBase* ast) {
         case AST_DROPTABLE:
             return dropTable(dynamic_cast<AstDropTable*>(ast));
         case AST_SHOWTABLES:
-            showTables();
-            return true;
+            return showTables(global->strList);
     }
     return false;
 }
@@ -131,27 +133,25 @@ bool MetaManager::dropTable(AstDropTable* ast) {
 }
 
 bool MetaManager::showTables(vector<string>& res) {
-    if (workingDB.length() == 0) {
-        res.clear();
+    res.clear();
+    if (workingDB.length() == 0)
         return false;
-    }
     string dbDir = "database/" + workingDB;
 
     DIR* dir = opendir(dbDir.c_str());
-    int r = 0;
     if (dir) {
         dirent* p;
-        while (!r && (p = readdir(dir))) {
+        while (p = readdir(dir)) {
             if (!strcmp(p->d_name, ".") && !strcmp(p->d_name, ".."))
                 continue;
-            string subdir = "database/";
-            subdir += p->d_name;
+            string subdir = dbDir + "/" + p->d_name;
             struct stat sbuf;
             if (!stat(subdir.c_str(), &sbuf))
                 if (S_ISDIR(sbuf.st_mode))
                     res.push_back(string(p->d_name));
         }
         closedir(dir);
+        return true;
     }
-    return true;
+    return false;
 }

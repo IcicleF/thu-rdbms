@@ -12,7 +12,7 @@ class AstKeyword : public AstBase {
             this->name = name;
         }
         virtual bool checkSemantic(SemRecorder& sm) const {
-            return true;
+            return !(sm.isInField() && val == AST_NULL);
         }
         virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("keyword: " + name);
@@ -62,7 +62,7 @@ class AstLiteral : public AstBase {
             }
         }
         virtual bool checkSemantic(SemRecorder& sm) const {
-            return true;
+            return !(sm.isInField() && literalType == L_STRING);
         }
         virtual void printTree(IdentPrinter& ip) const {
             std::string s = "literal ";

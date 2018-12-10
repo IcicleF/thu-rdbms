@@ -36,6 +36,7 @@ Program:    StmtList {
                 if (!($$->checkSemantic(*sm)))
                     exit(0);
                 $$->printTree(*ip);
+                $$->eval();
                 delete ip;
                 delete sm;
             };

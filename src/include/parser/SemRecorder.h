@@ -6,7 +6,10 @@
 
 class SemRecorder {
     public:
-        SemRecorder() { }
+        SemRecorder() { 
+            inField = false;
+            exprLayers = 0;
+        }
         ~SemRecorder() { }
 
         // AstField
@@ -23,7 +26,8 @@ class SemRecorder {
 
     private:
         std::vector<std::string> symStack;
-        bool inField, inExpr;
+        bool inField;
+        int exprLayers;
 };
 
 #endif
