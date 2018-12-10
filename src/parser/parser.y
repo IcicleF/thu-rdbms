@@ -36,7 +36,7 @@ Program:    StmtList {
                 IdentPrinter* ip = new IdentPrinter();
                 if (!($$->checkSemantic(*sm)))
                     exit(0);
-                $$->printTree(*ip);
+                //$$->printTree(*ip);
                 try {
                     if (std::any_cast<bool>($$->eval()))
                         std::cout << std::endl << "*** Database Operation Success ***" << std::endl;
