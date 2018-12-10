@@ -29,6 +29,8 @@ bool MetaManager::evalAst(AstBase* ast) {
             return dropTable(dynamic_cast<AstDropTable*>(ast));
         case AST_SHOWTABLES:
             return showTables(global->strList);
+        case AST_DESC:
+            return true;
     }
     return false;
 }
