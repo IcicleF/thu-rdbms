@@ -20,6 +20,9 @@ class AstKeyword : public AstBase {
         std::string toString() const {
             return name;
         }
+        virtual std::any eval() final {
+            return this->toString();
+        }
 
     public:
         std::string name;
@@ -30,15 +33,25 @@ class AstOper : public AstBase {
         AstOper(int code) : AstBase(AST_OPER) {
             this->val = code;
         }
+        AstOper(int code, const std::string& str) {
+            new (this) AstOper(code);
+            expr = str;
+        }
         virtual bool checkSemantic(SemRecorder& sm) const {
             return true;
         }
         virtual void printTree(IdentPrinter& ip) const {
-            ip.writeln("oper: " + (char)val);
+            ip.writeln("oper: " + this->toString());
         }
         std::string toString() const {
-            return "" + (char)val;
+            return expr.length() ? expr : "" + (char)val;
         }
+        virtual std::any eval() final {
+            return this->toString();
+        }
+
+    public:
+        std::string expr;
 };
 
 class AstLiteral : public AstBase {
@@ -92,6 +105,17 @@ class AstLiteral : public AstBase {
             }
             return "unknown";
         }
+        virtual std::any eval() final {
+            switch (literalType) {
+                case L_INT:
+                    return val;
+                case L_DECIMAL:
+                    return floatval;
+                case L_STRING:
+                    return std::string(strval);
+            }
+            return nullptr;
+        }
 
     public:
         int literalType;
@@ -100,8 +124,12 @@ class AstLiteral : public AstBase {
 class AstIdentifier : public AstBase {
     public:
         AstIdentifier(const char* val) : AstBase(AST_IDENTIFIER) {
-            this->strval = new char[strlen(val) + 5];
+            int l = strlen(val);
+            this->strval = new char[l + 5];
             strcpy(this->strval, val);
+            for (int i = 0; i < l; ++i)
+                if (this->strval[i] >= 'A' && this->strval[i] <= 'Z')
+                    this->strval[i] += 'a' - 'A';
         }
         virtual bool checkSemantic(SemRecorder& sm) const {
             return true;
@@ -111,6 +139,9 @@ class AstIdentifier : public AstBase {
         }
         std::string toString() const {
             return std::string(this->strval);
+        }
+        virtual std::any eval() final {
+            return this->toString();
         }
 };
 
@@ -125,6 +156,7 @@ class AstTopLevel : public AstBase {
         virtual void printTree(IdentPrinter& ip) const {
             stmtList->printTree(ip);
         }
+        virtual std::any eval() final;
 
     public:
         AstBase* stmtList;
@@ -150,6 +182,7 @@ class AstStmtList : public AstBase {
                 f->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
     
     public:
         std::vector<AstBase*> stmtList;
@@ -164,6 +197,7 @@ class AstShowDB : public AstBase {
         virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("show databases");
         }
+        virtual std::any eval() final;
 };
 
 class AstSetParam : public AstBase {
@@ -203,6 +237,7 @@ class AstCreateDB : public AstBase {
             name->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
     
     public:
         AstBase* name;
@@ -222,6 +257,7 @@ class AstDropDB : public AstBase {
             name->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
     
     public:
         AstBase* name;
@@ -241,6 +277,7 @@ class AstUseDB : public AstBase {
             name->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
     
     public:
         AstBase* name;
@@ -255,6 +292,7 @@ class AstShowTables : public AstBase {
         virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("show tables");
         }
+        virtual std::any eval() final;
 };
 
 class AstCreateTable : public AstBase {
@@ -273,6 +311,7 @@ class AstCreateTable : public AstBase {
             fieldList->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
 
     public:
         AstBase* name;
@@ -293,6 +332,7 @@ class AstDropTable : public AstBase {
             name->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
     
     public:
         AstBase* name;
@@ -312,6 +352,7 @@ class AstDesc : public AstBase {
             name->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
     
     public:
         AstBase* name;
@@ -436,6 +477,7 @@ class AstCreateIndex : public AstBase {
             colName->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
 
     public:
         AstBase* table;
@@ -458,6 +500,7 @@ class AstDropIndex : public AstBase {
             colName->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
 
     public:
         AstBase* table;
@@ -493,7 +536,7 @@ class AstFieldList : public AstBase {
 
 class AstField : public AstBase {
     public:
-        AstField(AstBase* name, AstBase* type, bool isNotNull) {
+        AstField(AstBase* name, AstBase* type, bool isNotNull) : AstBase(AST_FIELD) {
             this->name = name;
             this->ftype = type;
             this->isNotNull = isNotNull;

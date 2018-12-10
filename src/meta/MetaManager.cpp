@@ -30,7 +30,11 @@ bool MetaManager::evalAst(AstBase* ast) {
         case AST_SHOWTABLES:
             return showTables(global->strList);
         case AST_DESC:
-            return true;
+            return descTable(dynamic_cast<AstDesc*>(ast));
+        case AST_CREATEINDEX:
+            return createIndex(dynamic_cast<AstCreateIndex*>(ast));
+        case AST_DROPINDEX:
+            return dropIndex(dynamic_cast<AstDropIndex*>(ast));
     }
     return false;
 }
@@ -57,7 +61,7 @@ int MetaManager::removeDirectory(const char* directory) {
     if (dir) {
         dirent* p;
         while (!r && (p = readdir(dir))) {
-            if (!strcmp(p->d_name, ".") && !strcmp(p->d_name, ".."))
+            if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
                 continue;
             string subdir = directory;
             subdir += "/";
@@ -96,7 +100,7 @@ vector<string> MetaManager::showDatabases() {
     if (dir) {
         dirent* p;
         while (!r && (p = readdir(dir))) {
-            if (!strcmp(p->d_name, ".") && !strcmp(p->d_name, ".."))
+            if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
                 continue;
             string subdir = "database/";
             subdir += p->d_name;
@@ -155,6 +159,7 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     ctable << colnum << endl;//all col ident
 
     for (auto f : tfl->fieldList){
+        //cout << "#" << f->type << endl;
         if (f->type == AST_FIELD){
             tempident = dynamic_cast<AstIdentifier*>(dynamic_cast<AstField*>(f)->name)->toString();
             ctable << tempident << " ";
@@ -188,7 +193,7 @@ bool MetaManager::createTable(AstCreateTable* ast) {
                 ctable << "F" << " ";
             }
             if(temptype->val == TYPE_INT || temptype->val == TYPE_CHAR || temptype->val == TYPE_VARCHAR){
-                ctable << temptype->len << endl;//AttrLen
+                ctable << dynamic_cast<AstLiteral*>(temptype->len)->val << endl;//AttrLen
             }
         }
         else if (f->type == AST_PRIMKEYDECL){
@@ -197,7 +202,9 @@ bool MetaManager::createTable(AstCreateTable* ast) {
             for (auto id : til->identList){
                 tempident = dynamic_cast<AstIdentifier*>(id)->toString();
                 exist = false;
+                //cout << "! " << tempident << endl;
                 for (int i = 0; i < collist.size(); i++){
+                    //cout << collist[i] << endl;
                     if(tempident == collist[i])exist = true;
                 }
                 if (exist == false)pcheck = false;
@@ -266,7 +273,7 @@ bool MetaManager::showTables(vector<string>& res) {
     if (dir) {
         dirent* p;
         while (p = readdir(dir)) {
-            if (!strcmp(p->d_name, ".") && !strcmp(p->d_name, ".."))
+            if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
                 continue;
             string subdir = dbDir + "/" + p->d_name;
             struct stat sbuf;
@@ -348,6 +355,7 @@ bool MetaManager::descTable(AstDesc *ast){
         }
     }
     ift.close();
+    return true;
 }
 
 bool MetaManager::createIndex(AstCreateIndex* ast)

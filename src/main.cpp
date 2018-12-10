@@ -1,22 +1,14 @@
 // This is currently just an example.
 
-#include "pf/bufmanager/BufPageManager.h"
-#include "pf/fileio/FileManager.h"
-#include "rm/rm_manager.h"
-#include "rm/rm_scanner.h"
-#include "ix/ix_manager.h"
-#include "ix/ix_handler.h"
-#include "parser.tab.hpp"
-#include "parser/parser_base.h"
-#include "global.h"
 
-#include <iostream>
-#include <cstring>
+#include "parser.tab.hpp"
+#include "global.h"
 
 using namespace std;
 
 Global* global;
 
+/*
 void test1(FileManager* fm, BufPageManager* bpm) {
     char dat[25];
 
@@ -96,12 +88,11 @@ void test2(FileManager* fm, BufPageManager* bpm) {
     inse("f*3k", 123, 10);
     inse("f*4k", 124, 10);
     inse("f*5k", 125, 10);
-    /*
+
     inse("f*6k", 126, 10);
     inse("f*7k", 127, 10);
     inse("f*8k", 128, 10);
     cout << "success: f*0k ~ f*8k" << endl;
-    */
 
     ih->bpt->printTree();
     cout << "Insert Test succeed ! " << endl;
@@ -116,14 +107,9 @@ void test2(FileManager* fm, BufPageManager* bpm) {
     dele("0", 122349, 16);
     ih->bpt->printTree();
 }
+*/
 
 int main() {
-    FileManager *fm = new FileManager();
-    BufPageManager *bpm = new BufPageManager(fm);
-
-    // test1(fm, bpm);
-    // test2(fm, bpm);
-
     global = new Global();
     yyparse();
 

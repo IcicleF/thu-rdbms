@@ -8,6 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(thu-rdbms)
 
+set(EXECUTABLE_OUTPUT_PATH ./build)
+
 set(PARSER_TARGETS src/parser/lex.yy.cpp src/parser/parser.tab.hpp src/parser/parser.tab.cpp)
 set_source_files_properties(${PARSER_TARGETS} GENERATED)
 add_custom_target(parser)
@@ -26,7 +28,7 @@ add_custom_command(
     WORKING_DIRECTORY .
 )
 
-set(PARSER_SRCS src/parser/parser_base.cpp src/parser/IdentPrinter.cpp src/parser/SemRecorder.cpp)
+set(PARSER_SRCS src/parser/parser_base.cpp src/parser/IdentPrinter.cpp src/parser/SemRecorder.cpp src/parser/ast.cpp)
 
 include_directories(src/include src/parser)
 aux_source_directory(src/rm DIR_SRCS_RM)

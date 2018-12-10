@@ -1,6 +1,7 @@
 %define api.value.type { class AstBase* }
 %{
     #include <cstdlib>
+    #include <iostream>
     #include "parser/parser_base.h"
 %}
 
@@ -36,7 +37,15 @@ Program:    StmtList {
                 if (!($$->checkSemantic(*sm)))
                     exit(0);
                 $$->printTree(*ip);
-                $$->eval();
+                try {
+                    if (std::any_cast<bool>($$->eval()))
+                        std::cout << std::endl << "*** Database Operation Success ***" << std::endl;
+                    else
+                        std::cout << std::endl << "*** FAILED ***" << std::endl;
+                }
+                catch (std::bad_any_cast ex) {
+                    std::cout << std::endl << "*** UNEXPECTED ERROR: Contact programmer please ***" << std::endl;
+                }
                 delete ip;
                 delete sm;
             };
