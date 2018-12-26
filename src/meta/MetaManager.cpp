@@ -6,10 +6,184 @@ using namespace std;
 extern Global* global;
 
 MetaManager::MetaManager() {
+    dbMap.clear();
+    dbnum = 0;
     ensureDirectory("database");
+    DIR *dir;
+    dir = opendir("database");
+    int r = 0;
+    if (dir) {
+        dirent* p;
+        while (!r && (p = readdir(dir))) {
+            if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
+                continue;
+            string subdir = "database/";
+            subdir += p->d_name;
+            struct stat sbuf;
+            if (!stat(subdir.c_str(), &sbuf))
+                if (S_ISDIR(sbuf.st_mode)){
+                    dbnum++;
+                    dbMap[string(p->d_name)] = InitDB(string(p->d_name));
+                }
+        }
+        closedir(dir);
+    }
+}
+
+MetaManager::MetaManager(RMManager *rm, IXManager *ix, QLManager *ql)
+{
+    this->rm = rm;
+    this->ix = ix;
+    this->ql = ql;
+    dbMap.clear();
+    dbnum = 0;
+    ensureDirectory("database");
+    DIR *dir;
+    dir = opendir("database");
+    int r = 0;
+    if (dir) {
+        dirent* p;
+        while (!r && (p = readdir(dir))) {
+            if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
+                continue;
+            string subdir = "database/";
+            subdir += p->d_name;
+            struct stat sbuf;
+            if (!stat(subdir.c_str(), &sbuf))
+                if (S_ISDIR(sbuf.st_mode)){
+                    dbnum++;
+                    dbMap[string(p->d_name)] = InitDB(string(p->d_name));
+                }
+        }
+        closedir(dir);
+    }
 }
 
 MetaManager::~MetaManager() { }
+
+DBInfo* MetaManager::InitDB(string dbName)
+{
+    DBInfo *nt;
+    nt = new DBInfo();
+    nt->name = dbName;
+    string dbDir;
+    dbDir = "database/" + dbName;
+
+    DIR* dir = opendir(dbDir.c_str());
+    if (dir) {
+        dirent* p;
+        while (p = readdir(dir)) {
+            if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
+                continue;
+            string subdir = dbDir + "/" + p->d_name;
+            struct stat sbuf;
+            if (!stat(subdir.c_str(), &sbuf))
+                if (S_ISDIR(sbuf.st_mode)){
+                    nt->tablenum++;
+                    nt->TableMap[string(p->d_name)] = InitTable(subdir);
+                }
+        }
+        closedir(dir);
+    }
+    return nt;
+}
+
+TableInfo* MetaManager::InitTable(string tabledir)
+{
+    string Metadir = tabledir + "/meta.txt";
+    int idx,len;
+    string tbName;
+
+    len = tabledir.length();
+    idx = tabledir.find("/", 0);
+    tbName = tabledir.substr(idx+1, len-idx);
+
+    TableInfo* nt;
+    nt = new TableInfo();
+    nt->name = tbName;
+
+    ifstream ift;
+    ift.open(Metadir.c_str());
+    if (!ift) return nt;
+
+    int fieldnum,colnum,recSize;
+    string field,colname,tablename,notnull;
+    int fieldtype,coltype,colspace;
+
+    ColInfo* tcol;
+    ift >> tablename;
+    nt->name = tablename;
+    ift >> fieldnum >> colnum;
+    nt->colnum = colnum;
+
+    recSize = 0;
+    for (int i = 0; i < colnum; i++){
+        ift >> colname >> coltype >> colspace;
+        tcol = new ColInfo();
+        nt->ColMap[colname] = tcol;
+
+        tcol->name = colname;
+        tcol->AttrLength = colspace;
+        tcol->AttrOffset = recSize;
+        tcol->isforeign = false;
+        tcol->isprimary = false;
+        tcol->notnull = false;
+        tcol->collimit = -1;
+        recSize += colspace;
+        if(coltype == TYPE_INT){
+            tcol->type = INTEGER;
+        }
+        else if(coltype == TYPE_FLOAT){
+            tcol->type = FLOAT;
+        }
+        else if(coltype == TYPE_CHAR || coltype == TYPE_DATE){
+            tcol->type = STRING;
+        }
+    }
+
+    nt->recSize = recSize;
+
+    int colindex,collimit,prinum;
+    string priname,ref,refcol;
+
+    ColInfo *tempcol;
+
+    for (int i = 0; i < fieldnum; i++){
+        ift >> fieldtype;
+        if(fieldtype == AST_FIELD){
+            ift >> colname >> coltype >> notnull;
+            tempcol = nt->ColMap[colname];
+            if (notnull[0] == 'T'){
+                tempcol->notnull = true;
+            }
+            else tempcol->notnull = false;
+            
+            if(coltype == TYPE_INT || coltype == TYPE_CHAR || coltype == TYPE_FLOAT){
+                ift >> collimit;
+                tempcol->collimit = collimit;
+            }
+        }
+        else if (fieldtype == AST_PRIMKEYDECL){
+            ift >> prinum;
+            for (int j = 0; j < prinum; j++){
+                ift >> priname;
+                tempcol = nt->ColMap[priname];
+                tempcol->isprimary = true;
+            }
+        }
+        else if (fieldtype == AST_FOREKEYDECL){
+            ift >> priname >> ref >> refcol;
+            tempcol = nt->ColMap[priname];
+            tempcol->isforeign = true;
+            tempcol->ref = ref;
+            tempcol->refcol = refcol;
+        }
+    }
+
+    ift.close();
+    return nt;
+
+}
 
 bool MetaManager::evalAst(AstBase* ast) {
     int type = ast->type;
@@ -83,13 +257,25 @@ int MetaManager::removeDirectory(const char* directory) {
 
 bool MetaManager::createDatabase(AstCreateDB* ast) {
     std::string dbName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
+    dbnum++;
+    DBInfo* nt;
+    nt = new DBInfo();
+    nt->name = dbName;
+    dbMap[dbName] = nt;
     return ensureDirectory(("database/" + dbName).c_str());
 }
 
 bool MetaManager::dropDatabase(AstDropDB* ast) {
     std::string dbName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
-    if (dbName == workingDB)
+    if(dbMap[dbName] != NULL){
+        delete dbMap[dbName];
+        dbMap[dbName] = NULL;
+        dbnum--;
+    }
+    if (dbName == workingDB){
+        ql->db_info = NULL;
         workingDB.clear();
+    }
     return removeDirectory(("database/" + dbName).c_str()) == 0;
 }
 
@@ -120,11 +306,14 @@ bool MetaManager::useDatabase(AstUseDB* ast) {
     DIR* dir = opendir(dirName.c_str());
     if (dir) {
         workingDB = dbName;
+        ql->db_info = dbMap[dbName];
         closedir(dir);
         return true;
     }
-    else
+    else{
         workingDB.clear();
+        ql->db_info = NULL;
+    }
     return false;
 }
 
@@ -134,10 +323,13 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     string tableName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
     string tableDir = "database/" + workingDB + "/" + tableName;
     string MetaName = tableDir + "/meta.txt";
+    string DateName = tableDir + "/data.txt";
     bool ret = ensureDirectory(tableDir.c_str());
     if (ret == false) return false;
 
     ofstream ctable;
+    ifstream iref;
+
     ctable.open(MetaName.c_str());
     
     ctable << tableName << endl;//tablename
@@ -151,32 +343,48 @@ bool MetaManager::createTable(AstCreateTable* ast) {
 
     vector<string> collist;
     collist.clear();
+    int recSize = 0;
     int colnum = 0;
+
     for (auto f : tfl->fieldList){
-        if (f->type == AST_FIELD || f->type == AST_FOREKEYDECL)colnum++;
+        if (f->type == AST_FIELD)colnum++;
     }
     
-    ctable << colnum << endl;//all col ident
+    ctable << colnum << endl;//colnum
+    
+    int limitlen; //the size for char
+    int TempcolType,TempcolSpace;
+    string Temp;
+    string Ref,RefCol;
+    int refcolnum;
+    bool pcheck = true;
+    bool exist;
 
     for (auto f : tfl->fieldList){
         //cout << "#" << f->type << endl;
         if (f->type == AST_FIELD){
             tempident = dynamic_cast<AstIdentifier*>(dynamic_cast<AstField*>(f)->name)->toString();
             ctable << tempident << " ";
+            temptype = dynamic_cast<AstType*>(dynamic_cast<AstField*>(f)->ftype);
+            ctable << temptype->val << " ";//type
+            if (temptype->val == TYPE_INT || temptype->val == TYPE_FLOAT){
+                recSize += 4;
+                ctable << 4;
+            }
+            else if (temptype->val == TYPE_CHAR) {
+                limitlen = dynamic_cast<AstLiteral*>(temptype->len)->val;//AttrLen
+                recSize += limitlen;
+                ctable << limitlen;
+            }
+            else if (temptype->val == TYPE_DATE) {
+                recSize += 10;
+                ctable << 10;
+            }
             collist.push_back(tempident);
-        }
-        if (f->type == AST_FOREKEYDECL){
-            tempident = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->colName)->toString();
-            ctable << tempident << " ";
+            ctable << endl;
         }
     }
-    ctable << endl;
-    bool pcheck = true;
-    bool exist;
-
-    string Ref,RefCol;
-    string Temp;
-    int refcolnum;
+    
 
     for (auto f : tfl->fieldList){
         ctable << f->type << " ";//fieldtype
@@ -215,12 +423,19 @@ bool MetaManager::createTable(AstCreateTable* ast) {
         else if (f->type == AST_FOREKEYDECL){
             tempident = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->colName)->toString();
             ctable << tempident << " ";
+            
+            exist = false;
+            //cout << "! " << tempident << endl;
+            for (int i = 0; i < collist.size(); i++){
+                //cout << collist[i] << endl;
+                if(tempident == collist[i])exist = true;
+            }
 
             Ref = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->ref)->toString();
             RefCol = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->refColName)->toString();
 
             string Reftable = "database/" + workingDB + "/" + Ref + "/meta.txt";
-            ifstream iref(Reftable.c_str());
+            iref.open(Reftable.c_str());
             if(!iref)pcheck = false;
             else{
                 ctable << Ref << " ";
@@ -229,10 +444,11 @@ bool MetaManager::createTable(AstCreateTable* ast) {
                 iref >> refcolnum >> refcolnum;
                 exist = false;
                 for (int i = 0; i < refcolnum; i++){
-                    iref >> Temp;
+                    iref >> Temp >> TempcolType >> TempcolSpace;
                     if(Temp == RefCol)exist = true;
                 }
                 if(exist == false)pcheck = false;
+                iref.close();
             }
             ctable << endl;
         }
@@ -242,6 +458,12 @@ bool MetaManager::createTable(AstCreateTable* ast) {
         remove(MetaName.c_str());
         return false;
     }
+    else{
+        DBInfo *tempdb = dbMap[workingDB];
+        TableInfo* nt = InitTable(tableDir);
+        tempdb->tablenum++;
+        tempdb->TableMap[tableName] = nt;
+    }
 
     return true;
     /*
@@ -249,7 +471,7 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     tableName
     fieldNum
     colNum
-    colName*
+    (colName, colType, colSpace)*
     fieldtype ...*
     */
     //...
@@ -260,6 +482,14 @@ bool MetaManager::dropTable(AstDropTable* ast) {
 
     string tableName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
     string tableDir = "database/" + workingDB + "/" + tableName;
+    
+    DBInfo* tempdb = dbMap[workingDB];
+    if (tempdb->TableMap[tableName] != NULL){
+        delete tempdb->TableMap[tableName];
+        tempdb->TableMap[tableName] = NULL;
+        tempdb->tablenum--;
+    }
+
     return removeDirectory(tableDir.c_str()) == 0;
 }
 
@@ -296,13 +526,15 @@ bool MetaManager::descTable(AstDesc *ast){
     ift.open(metaname.c_str());
     if(!ift)return false;
     string temp;
+    int tempcoltype,tempcolspace;
+
     ift >> temp;
     cout << "table name: " << temp << endl;
     int fieldnum,colnum;
     ift >> fieldnum;
 
     ift >> colnum;
-    for (int i = 0; i < colnum; i++)ift>>temp;
+    for (int i = 0; i < colnum; i++)ift>>temp>>tempcoltype>>tempcolspace;
 
     int fieldtype,coltype,collen,prikeylen;
 

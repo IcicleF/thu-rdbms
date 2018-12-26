@@ -11,6 +11,7 @@
 #include "ix/ix_manager.h"
 #include "ix/ix_handler.h"
 #include "meta/MetaManager.h"
+#include "meta/ql_manager.h"
 
 struct Global {
     std::vector<std::string> strList;
@@ -18,14 +19,22 @@ struct Global {
     MetaManager* mm;
     FileManager* fm;
     BufPageManager* bpm;
+    RMManager *rm;
+    IXManager *ix;
+    QLManager *ql;
 
     Global() {
-        mm = new MetaManager();
         fm = new FileManager();
         bpm = new BufPageManager(fm);
+        rm = new RMManager(fm, bpm);
+        ix = new IXManager(fm, bpm);
+        ql = new QLManager(rm, ix);
+        mm = new MetaManager(rm, ix, ql);
     }
 
     ~Global() {
+        delete rm;
+        delete ix;
         delete bpm;
         delete fm;
         delete mm;
