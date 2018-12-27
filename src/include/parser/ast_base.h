@@ -32,7 +32,7 @@ class AstBase {
         }
 };
 
-class EvalException : public exception {
+class EvalException : public std::exception {
     public:
         EvalException(std::string wh) : exception() {
             this->wh = wh;

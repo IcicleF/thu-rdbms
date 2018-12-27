@@ -11,7 +11,7 @@
 #include "ix/ix_manager.h"
 #include "ix/ix_handler.h"
 #include "meta/MetaManager.h"
-#include "meta/ql_manager.h"
+#include "query/ql_manager.h"
 
 struct Global {
     std::vector<std::string> strList;

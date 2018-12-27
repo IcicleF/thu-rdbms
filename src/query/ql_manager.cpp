@@ -1,4 +1,4 @@
-#include "meta/ql_manager.h"
+#include "query/ql_manager.h"
 
 QLManager::QLManager()
 {

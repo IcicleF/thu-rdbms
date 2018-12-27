@@ -18,7 +18,7 @@
 #include "rm/rm_manager.h"
 #include "ix/ix_manager.h"
 #include "meta/info.h"
-#include "meta/ql_manager.h"
+#include "query/ql_manager.h"
 #include "scanner.h"
 
 /*
