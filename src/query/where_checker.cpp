@@ -1,13 +1,44 @@
 #include "query/where_checker.h"
 #include <cassert>
+#include <iostream>
 
 using namespace std;
 
-/* placeholder */
-ExprType getColumn(const RMRecord& rec, string colName) {
+extern Global* global;
+
+ExprType getColumn(const RMRecord& rec, string tableName, string colName) {
+    ColInfo* cInfo = NULL;
+    try {
+        global->ql->db_info->TableMap[tableName]->ColMap[colName];
+    }
+    catch (exception e) {
+        cout << e.what() << endl;
+        return ExprType();
+    }
+
     ExprType result;
-    result.type = TYPE_INT;
-    result.val = 114514;
+    int offset = cInfo->AttrOffset;
+    int len = cInfo->AttrLength;
+    char* data = new char[8192];
+    rec.getData(data);
+    switch (cInfo->type) {
+        case INTEGER:
+            assert(len == 4);
+            result.type = TYPE_INT;
+            result.val = *((int*)(data + offset));
+            break;
+        case FLOAT:
+            assert(len == 4);
+            result.type = TYPE_FLOAT;
+            result.floatval = *((float*)(data + offset));
+            break;
+        case STRING:
+            result.type = TYPE_CHAR;
+            result.strval = new char[len + 5];
+            strncpy(result.strval, data + offset, len);
+            break;
+    }
+    delete[] data;
     return result;
 }
 
@@ -21,13 +52,13 @@ inline ExprType fetchValue(AstCol* col, const map<string, RMRecord>& recs) {
             throw EvalException("must specify table name of column: " + dynamic_cast<AstIdentifier*>(col->colName)->toString());
         else 
             for (auto kv : recs)
-                return getColumn(kv.second, kv.first);
+                return getColumn(kv.second, kv.first, dynamic_cast<AstIdentifier*>(col->colName)->toString());
     }
     else {
         auto tableName = dynamic_cast<AstIdentifier*>(col->owner)->toString();
         if (recs.find(tableName) == recs.end())
             throw EvalException("unknown table: " + tableName);
-        return getColumn(recs.at(tableName), dynamic_cast<AstIdentifier*>(col->colName)->toString());
+        return getColumn(recs.at(tableName), tableName, dynamic_cast<AstIdentifier*>(col->colName)->toString());
     }
 }
 

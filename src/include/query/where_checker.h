@@ -7,6 +7,7 @@
 
 #include "parser/ast.h"
 #include "rm/rm_record.h"
+#include "global.h"
 
 struct ExprType {
     int type;
