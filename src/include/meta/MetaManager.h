@@ -12,12 +12,14 @@
 #include <map>
 #include <vector>
 #include <fstream>
+#include <iterator>
 
 #include "parser/ast.h"
 #include "rm/rm_manager.h"
 #include "ix/ix_manager.h"
 #include "meta/info.h"
 #include "meta/ql_manager.h"
+#include "scanner.h"
 
 /*
  * MetaManager 是一个专门用于管理元信息和基础文件交互的类。
@@ -33,6 +35,8 @@ class MetaManager {
 
         bool evalAst(AstBase*);
         bool getTableInfo(const char*, void*);
+        int dbnum;
+        std::map <std::string, DBInfo*> dbMap;
 
     private:
         std::string workingDB;
@@ -40,8 +44,6 @@ class MetaManager {
         IXManager *ix;
         QLManager *ql;
         
-        int dbnum;
-        std::map <std::string, DBInfo*> dbMap;
         DBInfo* InitDB(std::string);
         TableInfo* InitTable(std::string);
 

@@ -91,6 +91,7 @@ DBInfo* MetaManager::InitDB(string dbName)
 TableInfo* MetaManager::InitTable(string tabledir)
 {
     string Metadir = tabledir + "/meta.txt";
+    string indexdir = tabledir + "/index.txt";
     int idx,len;
     string tbName;
 
@@ -106,13 +107,15 @@ TableInfo* MetaManager::InitTable(string tabledir)
     ift.open(Metadir.c_str());
     if (!ift) return nt;
 
-    int fieldnum,colnum,recSize;
+    int fieldnum,colnum,recSize,newid;
     string field,colname,tablename,notnull;
     int fieldtype,coltype,colspace;
 
     ColInfo* tcol;
     ift >> tablename;
     nt->name = tablename;
+    ift >> newid;
+    nt->newid = newid;
     ift >> fieldnum >> colnum;
     nt->colnum = colnum;
 
@@ -146,7 +149,9 @@ TableInfo* MetaManager::InitTable(string tabledir)
     int colindex,collimit,prinum;
     string priname,ref,refcol;
 
-    ColInfo *tempcol;
+    ColInfo* tempcol;
+
+    int indexid = 1;
 
     for (int i = 0; i < fieldnum; i++){
         ift >> fieldtype;
@@ -158,7 +163,7 @@ TableInfo* MetaManager::InitTable(string tabledir)
             }
             else tempcol->notnull = false;
             
-            if(coltype == TYPE_INT || coltype == TYPE_CHAR || coltype == TYPE_FLOAT){
+            if(coltype == TYPE_INT || coltype == TYPE_CHAR || coltype == TYPE_VARCHAR){
                 ift >> collimit;
                 tempcol->collimit = collimit;
             }
@@ -169,6 +174,8 @@ TableInfo* MetaManager::InitTable(string tabledir)
                 ift >> priname;
                 tempcol = nt->ColMap[priname];
                 tempcol->isprimary = true;
+                nt->IndexMap[priname] = indexid;
+                indexid++;
             }
         }
         else if (fieldtype == AST_FOREKEYDECL){
@@ -180,6 +187,19 @@ TableInfo* MetaManager::InitTable(string tabledir)
         }
     }
 
+    ift.close();
+
+    ift.open(indexdir.c_str());
+    int newindexid,indexnum;
+    string indexname;
+    if (ift) {
+        ift >> indexnum >> newindexid;
+        nt->newindexid = newindexid;
+        for (int i = 0; i < indexnum; i++){
+            ift >> indexname >> indexid;
+            nt->IndexMap[indexname] = indexid;
+        }
+    }
     ift.close();
     return nt;
 
@@ -323,7 +343,9 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     string tableName = dynamic_cast<AstIdentifier*>(ast->name)->toString();
     string tableDir = "database/" + workingDB + "/" + tableName;
     string MetaName = tableDir + "/meta.txt";
-    string DateName = tableDir + "/data.txt";
+    string DataName = tableDir + "/data.txt";
+    string ixdir = tableDir + "/index";
+    
     bool ret = ensureDirectory(tableDir.c_str());
     if (ret == false) return false;
 
@@ -333,7 +355,7 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     ctable.open(MetaName.c_str());
     
     ctable << tableName << endl;//tablename
-
+    ctable << 1 << endl;
     AstType *temptype;
     AstFieldList *tfl = dynamic_cast<AstFieldList*>(ast->fieldList);
     AstIdentList *til;
@@ -401,7 +423,7 @@ bool MetaManager::createTable(AstCreateTable* ast) {
                 ctable << "F" << " ";
             }
             if(temptype->val == TYPE_INT || temptype->val == TYPE_CHAR || temptype->val == TYPE_VARCHAR){
-                ctable << dynamic_cast<AstLiteral*>(temptype->len)->val << endl;//AttrLen
+                ctable << dynamic_cast<AstLiteral*>(temptype->len)->val;//AttrLen
             }
         }
         else if (f->type == AST_PRIMKEYDECL){
@@ -416,9 +438,8 @@ bool MetaManager::createTable(AstCreateTable* ast) {
                     if(tempident == collist[i])exist = true;
                 }
                 if (exist == false)pcheck = false;
-                ctable << tempident << " ";
+                ctable << tempident;
             }
-            ctable << endl;
         }
         else if (f->type == AST_FOREKEYDECL){
             tempident = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->colName)->toString();
@@ -441,6 +462,7 @@ bool MetaManager::createTable(AstCreateTable* ast) {
                 ctable << Ref << " ";
                 ctable << RefCol << " ";
                 iref >> Temp;
+                iref >> refcolnum;
                 iref >> refcolnum >> refcolnum;
                 exist = false;
                 for (int i = 0; i < refcolnum; i++){
@@ -450,8 +472,8 @@ bool MetaManager::createTable(AstCreateTable* ast) {
                 if(exist == false)pcheck = false;
                 iref.close();
             }
-            ctable << endl;
         }
+        ctable << endl;
     }
     ctable.close();
     if(pcheck == false){
@@ -463,12 +485,27 @@ bool MetaManager::createTable(AstCreateTable* ast) {
         TableInfo* nt = InitTable(tableDir);
         tempdb->tablenum++;
         tempdb->TableMap[tableName] = nt;
+        ColInfo *cl;
+
+        map<string, ColInfo*>::iterator iv;
+        for(iv = nt->ColMap.begin(); iv != nt->ColMap.end(); iv++){
+            cl = iv->second;
+            if (cl->isprimary == true){
+                ix->createIndex(ixdir.c_str(), nt->newindexid, cl->type, cl->AttrLength);
+                nt->newindexid++;
+            }
+        }
+
+        rm->createFile(DataName.c_str(), nt->recSize);
+        ix->createIndex(ixdir.c_str(), 0, INTEGER, 4);
     }
+
 
     return true;
     /*
     database/dbname/tablename/meta.txt
     tableName
+    newid
     fieldNum
     colNum
     (colName, colType, colSpace)*
@@ -527,8 +564,10 @@ bool MetaManager::descTable(AstDesc *ast){
     if(!ift)return false;
     string temp;
     int tempcoltype,tempcolspace;
+    int newid;
 
     ift >> temp;
+    ift >> newid;
     cout << "table name: " << temp << endl;
     int fieldnum,colnum;
     ift >> fieldnum;
@@ -604,30 +643,41 @@ bool MetaManager::createIndex(AstCreateIndex* ast)
     ifstream ift;
     ofstream oft;
     
-    int indexnum;
+    int indexnum,newindexid;
     vector<string> indices;
     indices.clear();
     string temp;
+    int tempcoltype, tempcolspace, tempid;
+
+    DBInfo* db;
+    TableInfo* tl;
+    db = dbMap[workingDB];
+    if (db->TableMap[tablename] == NULL)return false;
+    tl = db->TableMap[tablename];
+
+    bool hasexist = false;
 
     ift.open(indexdir.c_str());
     if (!ift)indexnum = 0;
     else{
-        ift >> indexnum;
+        ift >> indexnum >> newindexid;
         for (int i = 0; i < indexnum; i++){
-            ift >> temp;
+            ift >> temp >> tempid;
             indices.push_back(temp);
+            if (temp == colname || tl->IndexMap[colname] != 0)hasexist = true;
         }
+        ift.close();
+        if (hasexist == true)return false;
     }
-    ift.close();
 
     bool exist = false;
     ift.open(metadir.c_str());
     if(!ift)return false;
     ift >> temp;
     int colnum;
-    ift >> colnum >> colnum;
+    ift >> colnum >> colnum >> colnum;
     for (int i = 0 ; i < colnum; i++){
-        ift >> temp;
+        ift >> temp >> tempcoltype >> tempcolspace;
         if (colname == temp)exist = true;
     }
     ift.close();
@@ -635,12 +685,21 @@ bool MetaManager::createIndex(AstCreateIndex* ast)
     
     indices.push_back(colname);
     indexnum++;
+    tl->IndexMap[colname] = tl->newindexid;
+    tl->newindexid++;
+    
     oft.open(indexdir.c_str());
-    oft << indexnum << endl;
+    oft << indexnum << " " << tl->newindexid << endl;
     for(int i = 0; i < indexnum; i++){
-        oft << indices[i] << endl;
+        oft << indices[i] << " " << tl->IndexMap[indices[i]] << endl;
     }
     oft.close();
+
+    string ixdir;
+    ixdir = tabledir + "/index";
+
+    ColInfo* cl = tl->ColMap[colname];
+    ix->createIndex(ixdir.c_str(), tl->IndexMap[colname], cl->type, cl->AttrLength);
     return true;
 }
 
@@ -649,15 +708,22 @@ bool MetaManager::dropIndex(AstDropIndex* ast){
     if (workingDB.length() == 0) return false;
     tablename = dynamic_cast<AstIdentifier*>(ast->table)->toString();
     colname = dynamic_cast<AstIdentifier*>(ast->colName)->toString();
-    string tabledir,indexdir,metadir;
+    string tabledir,indexdir,metadir,ixdir;
     tabledir = "database/" + workingDB + "/" + tablename;
     indexdir = tabledir + "/index.txt";
     metadir = tabledir + "/meta.txt";
+    ixdir = tabledir + "/index";
+
+    DBInfo* db;
+    TableInfo* tl;
+    db = dbMap[workingDB];
+    tl = db->TableMap[tablename];
+    if (tl == NULL)return false;
 
     ifstream ift;
     ofstream oft;
     
-    int indexnum;
+    int indexnum,newindexid,tempid;
     vector<string> indices;
     indices.clear();
     string temp;
@@ -666,12 +732,14 @@ bool MetaManager::dropIndex(AstDropIndex* ast){
     ift.open(indexdir.c_str());
     if (!ift)indexnum = 0;
     else{
-        ift >> indexnum;
+        ift >> indexnum >> newindexid;
         for (int i = 0; i < indexnum; i++){
-            ift >> temp;
+            ift >> temp >> tempid;
             if (temp == colname){
                 exist = true;
                 indexnum--;
+                ix->destroyIndex(ixdir.c_str(), tl->IndexMap[colname]);
+                tl->IndexMap[colname] = 0;
             }
             else indices.push_back(temp);
         }
@@ -680,9 +748,9 @@ bool MetaManager::dropIndex(AstDropIndex* ast){
     if(exist == false)return false;
 
     oft.open(indexdir.c_str());
-    oft << indexnum << endl;
+    oft << indexnum << " " << newindexid << endl;
     for(int i = 0; i < indexnum; i++){
-        oft << indices[i] << endl;
+        oft << indices[i] << " " << tl->IndexMap[indices[i]] << endl;
     }
     oft.close();
     return true; 

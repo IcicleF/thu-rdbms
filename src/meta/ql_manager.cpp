@@ -11,3 +11,8 @@ QLManager::QLManager(RMManager *rm, IXManager *ix)
     this->ix = ix;
     this->db_info = NULL;
 }
+
+bool QLManager::evalAst(AstBase* ast)
+{
+    return false;
+}

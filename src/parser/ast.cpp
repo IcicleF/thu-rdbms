@@ -138,3 +138,13 @@ any AstDropIndex::eval() {
         throw EvalException("Fail: cannot delete index on " + colName + " of table " + table + " in current context");
     return res;
 }
+
+any AstInsert::eval() {
+    bool res = global->ql->evalAst(this);
+    string tablename = dynamic_cast<AstIdentifier*>(this->table)->toString();
+    if (res)
+        cout << "Insert value into table " << tablename << endl;
+    else
+        throw EvalException("Fail: cannot insert value into table " + tablename + " in current context");
+    return res;
+}

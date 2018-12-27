@@ -30,10 +30,16 @@ class TableInfo{
         int colnum,recSize;
         std::map <std::string, ColInfo*> ColMap;
         
+        std::map <std::string, int> IndexMap;//rank = 1
+        int newindexid,newid;
+
         TableInfo(){
             colnum = 0;
             ColMap.clear();
+            IndexMap.clear();
             recSize = 0;
+            newindexid = 1;
+            newid = 1;
         }
 };
 

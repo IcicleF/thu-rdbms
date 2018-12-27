@@ -374,6 +374,7 @@ class AstInsert : public AstBase {
             valList->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
 
     public:
         AstBase* table;

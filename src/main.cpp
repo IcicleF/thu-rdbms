@@ -3,6 +3,10 @@
 
 #include "parser.tab.hpp"
 #include "global.h"
+#include "meta/info.h"
+#include <iostream>
+#include <cstdio>
+#include <iterator>
 
 using namespace std;
 
@@ -109,9 +113,30 @@ void test2(FileManager* fm, BufPageManager* bpm) {
 }
 */
 
+void testInfo()
+{
+    cout << global->mm->dbnum << endl;
+    DBInfo* db = global->mm->dbMap["orderdb"];
+    cout << db->tablenum << endl;
+    TableInfo *tb;
+    ColInfo *cl;
+    map<string, TableInfo*>::iterator it;
+    map<string, ColInfo*>::iterator iv;
+    for (it = db->TableMap.begin(); it != db->TableMap.end(); it++){
+        tb = it->second;
+        cout << tb->name << " " << tb->colnum << " " << tb->recSize << endl;
+        for (iv = tb->ColMap.begin(); iv != tb->ColMap.end(); iv++){
+            cl = iv->second;
+            cout << cl->name << " " << cl->AttrOffset << " " << cl->AttrLength << " ";
+            cout << cl->isforeign << " " << cl->isprimary << endl;
+        }
+        cout << endl;
+    }
+}
+
 int main() {
     global = new Global();
     yyparse();
-
+    //testInfo();
     return 0;
 }
