@@ -4,6 +4,7 @@
 #include <any>
 #include <vector>
 #include <iostream>
+#include <stdexcept>
 #include "parser/IdentPrinter.h"
 #include "parser/SemRecorder.h"
 
@@ -29,6 +30,20 @@ class AstBase {
         virtual std::any eval() {
             return std::any();
         }
+};
+
+class EvalException : public exception {
+    public:
+        EvalException(std::string wh) : exception() {
+            this->wh = wh;
+        }
+        virtual ~EvalException() noexcept override { }
+        virtual const char* what() const noexcept override {
+            return wh.c_str();
+        }
+
+    private:
+        std::string wh;
 };
 
 const int L_INT = 500;

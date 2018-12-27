@@ -1,5 +1,4 @@
 #include <iostream>
-#include <stdexcept>
 
 #include "global.h"
 #include "parser/ast.h"
@@ -7,20 +6,6 @@
 using namespace std;
 
 extern Global* global;
-
-class EvalException : public exception {
-    public:
-        EvalException(string wh) : exception() {
-            this->wh = wh;
-        }
-        virtual ~EvalException() noexcept override { }
-        virtual const char* what() const noexcept override {
-            return wh.c_str();
-        }
-
-    private:
-        string wh;
-};
 
 any AstTopLevel::eval() {
     try {
