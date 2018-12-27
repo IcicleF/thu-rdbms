@@ -34,6 +34,7 @@ include_directories(src/include src/parser)
 aux_source_directory(src/rm DIR_SRCS_RM)
 aux_source_directory(src/ix DIR_SRCS_IX)
 aux_source_directory(src/meta DIR_SRCS_META)
+aux_source_directory(src/query DIR_SRCS_QUERY)
 aux_source_directory(src DIR_SRCS)
 
 add_executable(dbmain 
@@ -41,6 +42,7 @@ add_executable(dbmain
     ${DIR_SRCS_RM}
     ${DIR_SRCS_IX}
     ${DIR_SRCS_META}
+    ${DIR_SRCS_QUERY}
     ${PARSER_TARGETS}
     ${PARSER_SRCS}
 )
