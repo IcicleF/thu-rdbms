@@ -12,7 +12,7 @@ class ColInfo{
     public:
         std::string name;
         AttrType type;
-        int AttrLength,AttrOffset,collimit;
+        int AttrLength,AttrOffset,collimit,asttype;
         bool isprimary,isforeign,notnull;
         std::string ref,refcol;
 
@@ -31,12 +31,15 @@ class TableInfo{
         std::map <std::string, ColInfo*> ColMap;
         
         std::map <std::string, int> IndexMap;//rank = 1
+        std::vector<std::string> cols;
+
         int newindexid,newid;
 
         TableInfo(){
             colnum = 0;
             ColMap.clear();
             IndexMap.clear();
+            cols.clear();
             recSize = 0;
             newindexid = 1;
             newid = 1;

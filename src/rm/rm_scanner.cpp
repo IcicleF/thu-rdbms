@@ -26,15 +26,15 @@ bool RMScanner::vcompare(CharBufType b)
     {
         case INTEGER:
         {
-            vi = atoi((char *)b);
-            stdi = atoi((char *)value);
+            vi = *((int*)b);
+            stdi = *((int*)value);
             break;
         }
         
         case FLOAT:
         {
-            vf = atof((char *)b);
-            stdf = atof((char *)value);
+            vf = *((float*)b);
+            stdf = *((float*)value);
             break;
         }
         

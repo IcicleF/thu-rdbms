@@ -4,7 +4,12 @@
 #include "parser/ast.h"
 #include "meta/info.h"
 #include "rm/rm_manager.h"
+#include "rm/rm_file.h"
 #include "ix/ix_manager.h"
+#include "ix/ix_handler.h"
+#include "ix/ix_scanner.h"
+#include "rid.h"
+#include <cmath>
 
 class QLManager{
     public:
@@ -14,13 +19,15 @@ class QLManager{
         
         bool evalAst(AstBase*);
 
-        void Insert();
-        void Delete();
-        void Select();
-        void Update();
+        bool Insert(AstInsert*);
+        bool Delete();
+        bool Select();
+        bool Update();
     private:
         RMManager *rm;
         IXManager *ix;
+
+        bool checktype(AstLiteral*, ColInfo*);
 };
 
 #endif

@@ -123,6 +123,7 @@ TableInfo* MetaManager::InitTable(string tabledir)
     for (int i = 0; i < colnum; i++){
         ift >> colname >> coltype >> colspace;
         tcol = new ColInfo();
+        nt->cols.push_back(colname);
         nt->ColMap[colname] = tcol;
 
         tcol->name = colname;
@@ -132,6 +133,7 @@ TableInfo* MetaManager::InitTable(string tabledir)
         tcol->isprimary = false;
         tcol->notnull = false;
         tcol->collimit = -1;
+        tcol->asttype = coltype;
         recSize += colspace;
         if(coltype == TYPE_INT){
             tcol->type = INTEGER;
@@ -454,23 +456,17 @@ bool MetaManager::createTable(AstCreateTable* ast) {
 
             Ref = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->ref)->toString();
             RefCol = dynamic_cast<AstIdentifier*>(dynamic_cast<AstForeignKeyDecl*>(f)->refColName)->toString();
-
-            string Reftable = "database/" + workingDB + "/" + Ref + "/meta.txt";
-            iref.open(Reftable.c_str());
-            if(!iref)pcheck = false;
+            ctable << Ref << " " << RefCol;
+            
+            DBInfo* db = dbMap[workingDB];
+            TableInfo* tb = db->TableMap[Ref];
+            if (tb == NULL) pcheck = false;
             else{
-                ctable << Ref << " ";
-                ctable << RefCol << " ";
-                iref >> Temp;
-                iref >> refcolnum;
-                iref >> refcolnum >> refcolnum;
-                exist = false;
-                for (int i = 0; i < refcolnum; i++){
-                    iref >> Temp >> TempcolType >> TempcolSpace;
-                    if(Temp == RefCol)exist = true;
+                ColInfo* refcl = tb->ColMap[RefCol];
+                if (refcl == NULL) pcheck = false;
+                else{
+                    if(!refcl->isprimary) pcheck = false;
                 }
-                if(exist == false)pcheck = false;
-                iref.close();
             }
         }
         ctable << endl;
