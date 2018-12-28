@@ -12,8 +12,7 @@ ExprType getColumn(const RMRecord& rec, string tableName, string colName) {
         cInfo = global->ql->db_info->TableMap[tableName]->ColMap[colName];
     }
     catch (exception e) {
-        cout << e.what() << endl;
-        return ExprType();
+        throw EvalException("unknown table or column name");
     }
 
     ExprType result;
@@ -63,6 +62,8 @@ inline ExprType fetchValue(AstCol* col, const map<string, RMRecord>& recs) {
 }
 
 bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
+    if (_wh == NULL)
+        return true;
     ExprType vl, vr;
     auto wh = dynamic_cast<AstWhereClause*>(_wh);
     switch (wh->val) {
