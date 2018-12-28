@@ -1,12 +1,15 @@
 #include "query/ql_manager.h"
+#include <climits>
 
-inline int pow10(int x) {
+inline int pow10lim(int x) {
     if (x > 10)
         return -1;
+    if (x == 10)
+        return INT_MAX;
     int res = 1;
     while (x--)
         res *= 10;
-    return res;
+    return res - 1;
 }
 inline bool checkDate(int yy, int mm, int dd) {
     if (yy < 1970 || yy > 9999)
@@ -74,8 +77,8 @@ bool QLManager::checktype(AstLiteral* ast, ColInfo* cl)
     if (cl->collimit != -1){
         if (temptype == INTEGER){
             if (cl->collimit < 10){
-                limval = pow10(cl->collimit);
-                if (ast->val >= limval) return false;
+                limval = pow10lim(cl->collimit);
+                if (ast->val > limval) return false;
             }
         }
         else if(temptype == STRING){
