@@ -9,7 +9,7 @@ extern Global* global;
 ExprType getColumn(const RMRecord& rec, string tableName, string colName) {
     ColInfo* cInfo = NULL;
     try {
-        global->ql->db_info->TableMap[tableName]->ColMap[colName];
+        cInfo = global->ql->db_info->TableMap[tableName]->ColMap[colName];
     }
     catch (exception e) {
         cout << e.what() << endl;

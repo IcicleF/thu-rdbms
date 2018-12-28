@@ -1,5 +1,37 @@
 #include "query/ql_manager.h"
 
+inline int pow10(int x) {
+    if (x > 10)
+        return -1;
+    int res = 1;
+    while (x--)
+        res *= 10;
+    return res;
+}
+inline bool checkDate(int yy, int mm, int dd) {
+    if (yy < 1970 || yy > 9999)
+        return false;
+    if (mm < 1 || mm > 12)
+        return false;
+    if (dd < 1)
+        return false;
+    int dlim;
+    if ((mm < 8 && (mm & 1)) || ((mm & 1) ^ 1))
+        dlim = 31;
+    else if (mm != 2)
+        dlim = 30;
+    else {
+        if (yy % 4 == 0)
+            dlim = 29;
+        if (yy % 100 == 0)
+            dlim = 28;
+        if (yy % 400 == 0)
+            dlim = 29;
+    }
+    return dd <= dlim;
+}
+
+
 QLManager::QLManager()
 {
     //
@@ -42,7 +74,7 @@ bool QLManager::checktype(AstLiteral* ast, ColInfo* cl)
     if (cl->collimit != -1){
         if (temptype == INTEGER){
             if (cl->collimit < 10){
-                limval = 10^(cl->collimit);
+                limval = pow10(cl->collimit);
                 if (ast->val >= limval) return false;
             }
         }
@@ -66,15 +98,8 @@ bool QLManager::checktype(AstLiteral* ast, ColInfo* cl)
         year = atoi(strval.substr(0,4).c_str());
         month = atoi(strval.substr(5,2).c_str());
         day = atoi(strval.substr(8,2).c_str());
-        if (year < 2013 || year > 2019) return false;
-        if (month < 1 || month > 12) return false;
-        int limit[13];
-        limit[1] = 31; limit[3] = 31; limit[5] = 31;
-        limit[7] = 31; limit[8] = 31; limit[10] = 31; limit[12] = 31;
-        limit[4] = 30; limit[6] = 30; limit[9] = 30; limit[11] = 30;
-        if (year % 4 == 0)limit[2] = 29;
-        else limit[2] = 28;
-        if (day < 1 || day > limit[month]) return false;
+        if (!checkDate(year, month, day))
+            return false;
     }
     return true;
 }
@@ -119,17 +144,21 @@ bool QLManager::Insert(AstInsert* ast)
     for(int i = 0; i < sz; i++){
         vil = dynamic_cast<AstValList*>(vallists->valLists[i]);
         int vsz = vil->valList.size();
-        if(vsz != tb->colnum)pcheck = false;
-        if(!pcheck)break;
+        if(vsz != tb->colnum){
+            pcheck = false;
+            break;
+        }
         for(int j = 0; j < vsz; j++){
             cl = tb->ColMap[tb->cols[j]];
             if (vil->valList[j]->type == AST_KEYWORD){
-                kwd = dynamic_cast<AstKeyword*>(vil->valList[j]);
-                if (kwd->name != "SQLNULL") pcheck = false;
+                //kwd = dynamic_cast<AstKeyword*>(vil->valList[j]);
+                //if (kwd->name != "SQLNULL") pcheck = false;
                 if (cl->notnull == true) pcheck = false;
             }
             else if (vil->valList[j]->type == AST_LITERAL){
                 pcheck = checktype(lil, cl);
+                if (!pcheck)
+                    break;
                 if(cl->isprimary){
                     indexdir = "database/" + db_info->name + "/" + tableName + "/index";
                     ih = ix->openIndex(indexdir.c_str(), tb->IndexMap[cl->name]);
@@ -168,19 +197,19 @@ bool QLManager::Insert(AstInsert* ast)
             else pcheck = false;
             if(!pcheck)break;
         }
+        if (!pcheck)
+            break;
     }
     if(!pcheck)return false;
     
     string datadir = "database/" + db_info->name + "/" + tableName + "/data.txt";
-    RMFile rh;
-    rh = rm->openFile(datadir.c_str());
+    RMFile rh = rm->openFile(datadir.c_str());
     char* Data;
     
     indexdir = "database/" + db_info->name + "/" + tableName + "/index";
 
     for (int i = 0; i < sz; i++){
         vil = dynamic_cast<AstValList*>(vallists->valLists[i]);
-        int vsz = vil->valList.size();
         Data = new char[tb->recSize];
         for (int j = 0; j < tb->colnum; j++){
             cl = tb->ColMap[tb->cols[j]];
@@ -195,9 +224,10 @@ bool QLManager::Insert(AstInsert* ast)
             }
         }
         temprid = rh.insertRec(Data);
-        rm->closeFile(rh);
+        
         ih = ix->openIndex(indexdir.c_str(), 0);
         ih->insertEntry((void *)(&(tb->newid)), temprid);
+        tb->newid++;
         ix->closeIndex(*ih);
 
         for (int j = 0; j < tb->colnum; j++){
@@ -216,7 +246,9 @@ bool QLManager::Insert(AstInsert* ast)
                 ix->closeIndex(*ih);
             }
         }
+        delete[] Data;
     }
+    rm->closeFile(rh);
     return true;
 }
 

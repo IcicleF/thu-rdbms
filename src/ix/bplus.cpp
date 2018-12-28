@@ -17,8 +17,8 @@ BPlusTree::BPlusTree(BufPageManager* bpm, int fileId) {
     this->attrLen = p0[0];
     this->_nodeNum = p0[2];
     this->_root = p0[3];
-    //fanOut = (PAGE_SIZE - 16) / (attrLen + 6) + 1;
-    fanOut = 4;             // 测试用！！！
+    fanOut = (PAGE_SIZE - 16) / (attrLen + 6) + 1;
+    //fanOut = 4;             // 测试用！！！
     if (fanOut & 1)
         fanOut -= 1;        // force even
     cur.owner = this;
