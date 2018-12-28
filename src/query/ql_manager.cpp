@@ -24,6 +24,7 @@ inline bool checkDate(int yy, int mm, int dd) {
     else if (mm != 2)
         dlim = 30;
     else {
+        dlim = 28;
         if (yy % 4 == 0)
             dlim = 29;
         if (yy % 100 == 0)
