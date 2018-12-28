@@ -19,7 +19,7 @@ inline bool checkDate(int yy, int mm, int dd) {
     if (dd < 1)
         return false;
     int dlim;
-    if ((mm < 8 && (mm & 1)) || ((mm & 1) ^ 1))
+    if ((mm < 8 && (mm & 1)) || (mm >= 8 && ((mm & 1) ^ 1)))
         dlim = 31;
     else if (mm != 2)
         dlim = 30;
