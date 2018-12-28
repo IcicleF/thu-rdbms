@@ -899,7 +899,7 @@ class AstSelector : public AstBase {
             ip.deident();
         }
 
-    private:
+    public:
         AstBase* colList;
 };
 

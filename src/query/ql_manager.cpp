@@ -1,5 +1,11 @@
 #include "query/ql_manager.h"
+#include "query/where_checker.h"
 #include <climits>
+#include <iostream>
+#include <sstream>
+#include <functional>
+
+using namespace std;
 
 inline int pow10lim(int x) {
     if (x > 10)
@@ -60,7 +66,7 @@ bool QLManager::evalAst(AstBase* ast)
         case AST_UPDATE:
             return Update();
         case AST_SELECT:
-            return Select();
+            return Select(dynamic_cast<AstSelect*>(ast));
     }
     return false;
 }
@@ -332,7 +338,147 @@ bool QLManager::Update()
     return false;
 }
 
-bool QLManager::Select()
+typedef function<void(const map<string, RMRecord>&)> CallbackType;
+struct TableEnumerator {
+    DBInfo* dbInfo;
+    RMManager* rm;
+    IXManager* ix;
+
+    AstIdentList* tableList;
+    vector<RMRecord> selRecs;
+    int n;
+    char buf[8192];
+    
+    TableEnumerator(DBInfo* dbInfo, RMManager* rm, IXManager* ix, AstIdentList* tableList = NULL) : 
+        dbInfo(dbInfo), rm(rm), ix(ix), tableList(tableList) {
+        n = tableList->identList.size();
+        selRecs.resize(n);
+    }
+
+    void Enumerate(int i, AstBase* where, CallbackType cb) {
+        if (i == n) {
+            map<string, RMRecord> recMp;
+            for (int j = 0; j < n; j++)
+                recMp[dynamic_cast<AstIdentifier*>(tableList->identList[j])->toString()] = selRecs[j];
+            if (checkWhere(where, recMp))
+                cb(recMp);
+            return;
+        }
+        auto tableName = dynamic_cast<AstIdentifier*>(tableList->identList[i])->toString();
+        string dataFile = "database/" + dbInfo->name + "/" + tableName + "/data.txt";
+        string indexFile = "database/" + dbInfo->name + "/" + tableName + "/index";
+
+        RMFile rf = rm->openFile(dataFile.c_str());
+        IXHandler* ih = ix->openIndex(indexFile.c_str(), 0);
+        IXScanner isc;
+        isc.openScan(*ih, ST_NOP, NULL);
+        RID rid;
+        while (isc.nextRec(rid, buf)) {
+            RMRecord rec = rf.getRec(rid);
+            selRecs[i] = rec;
+            this->Enumerate(i + 1, where, cb);
+        }
+        isc.closeScan();
+        ix->closeIndex(*ih);
+        rm->closeFile(rf);
+    }
+};
+
+// SELECT [Selector] FROM [TableList] WHERE [WhereClause]
+bool QLManager::Select(AstSelect* ast)
 {
-    return false;
+    auto selector = dynamic_cast<AstSelector*>(ast->selector)->colList;
+    auto tableList = dynamic_cast<AstIdentList*>(ast->tableList);
+
+    // Check table names in [TableList]
+    for (auto tableName : tableList->identList) {
+        auto name = dynamic_cast<AstIdentifier*>(tableName)->toString();
+        if (db_info->TableMap.find(name) == db_info->TableMap.end())
+            throw EvalException("unknown table: " + name);
+    }
+
+    vector<pair<string, ColInfo*>> printColumns;
+    if (selector) {
+        auto colList = dynamic_cast<AstColList*>(selector);
+        for (auto colBase : colList->colList) {
+            auto col = dynamic_cast<AstCol*>(colBase);
+            auto colName = dynamic_cast<AstIdentifier*>(col->colName)->toString();
+            string owner;
+            if (col->owner) {
+                owner = dynamic_cast<AstIdentifier*>(col->owner)->toString();
+                bool found = false;
+
+                // Check table names in [Selector]
+                for (auto tableName : tableList->identList)
+                    if (dynamic_cast<AstIdentifier*>(tableName)->toString() == owner) {
+                        found = true;
+                        break;
+                    }
+                if (!found)
+                    throw EvalException("unknown table: " + owner);
+            }
+            else {
+                if (tableList->identList.size() > 1)
+                    throw EvalException("must specify table name for column " + colName);
+                owner = dynamic_cast<AstIdentifier*>(tableList->identList[0])->toString();
+            }
+
+            // Use try-catch to check column names in [Selector]
+            try {
+                auto colInfo = db_info->TableMap[owner]->ColMap.at(colName);
+                printColumns.push_back(make_pair(owner, colInfo));
+            }
+            catch (exception ex) {
+                throw EvalException("unknown column: " + colName);
+            }
+        }
+    }
+    else {
+        for (auto tableName : tableList->identList) {
+            auto owner = dynamic_cast<AstIdentifier*>(tableName)->toString();
+            for (auto colInfo : db_info->TableMap[owner]->ColMap)
+                printColumns.push_back(colInfo);
+        }
+    }
+    
+    vector<int> printOffset;
+    printOffset.resize(printColumns.size());
+    printOffset[0] = 0;
+    // Calculate printing-width for each column
+    for (int i = 0; i < printColumns.size() - 1; ++i) {
+        int titleLen = printColumns[i].first.length() + printColumns[i].second->name.length() + 1;
+        int attrWidth = printColumns[i].second->type == FLOAT ? 11 : printColumns[i].second->collimit;
+        int width = max(titleLen, attrWidth);
+        printOffset[i + 1] = printOffset[i] + width + 2;
+        cout << printColumns[i].first << "." << printColumns[i].second->name;
+        for (int j = printOffset[i] + printColumns[i].first.length(); j < printOffset[i + 1]; ++j)
+            cout << " ";
+    }
+    cout << endl;       // Title printed
+    for (int i = 0, fi = printOffset[printColumns.size() - 1]; i < fi; ++i)
+        cout << "-";
+    cout << endl;       // Split line printed
+
+    TableEnumerator te(db_info, rm, ix, tableList);
+    auto callback = [&](const map<string, RMRecord>& recMp) -> void {
+        for (int i = 0, fi = printColumns.size(); i < fi; ++i) {
+            auto pc = printColumns[i];
+            ExprType res = getColumn(recMp.at(pc.first), pc.first, pc.second->name);
+            stringstream ss;
+            if (res.type == TYPE_INT)
+                ss << res.val;
+            else if (res.type == TYPE_FLOAT)
+                ss << res.floatval;
+            else
+                ss << res.strval;
+            string s = ss.str();
+            cout << s;
+            if (i != fi - 1) {
+                for (int j = printOffset[i] + s.length(); j < printOffset[i + 1]; ++j)
+                    cout << " ";
+            }
+        }
+        cout << endl;
+    };
+    te.Enumerate(0, ast->whereClause, callback);
 }

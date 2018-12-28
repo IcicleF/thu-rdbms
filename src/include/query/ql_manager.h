@@ -25,7 +25,7 @@ class QLManager{
 
         bool Insert(AstInsert*);
         bool Delete(AstDelete*);
-        bool Select();
+        bool Select(AstSelect*);
         bool Update();
     private:
         RMManager *rm;
