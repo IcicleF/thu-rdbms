@@ -13,7 +13,7 @@ class IXScanner {
         ~IXScanner();
         
         void openScan(IXHandler&, ScanType, void*);
-        bool nextRec(RID&);
+        bool nextRec(RID&, void*);
         void closeScan();
     private:
         void getnextRec();
@@ -22,6 +22,7 @@ class IXScanner {
         BPlusNode cur,stdcur;
         bool pf;
         int curchild,stdpos;
+        int attrlen;
         int scanstatus;//1 means scanning 0 means nots
         ScanType scantype;
   

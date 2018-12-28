@@ -114,10 +114,12 @@ TableInfo* MetaManager::InitTable(string tabledir)
     ColInfo* tcol;
     ift >> tablename;
     nt->name = tablename;
-    ift >> newid;
-    nt->newid = newid;
     ift >> fieldnum >> colnum;
     nt->colnum = colnum;
+
+    string datadir = tabledir + "/data.txt"; 
+    RMFile rh = rm->openFile(datadir.c_str());
+    nt->newid = (int) rh.getNewid();
 
     recSize = 0;
     for (int i = 0; i < colnum; i++){
@@ -201,6 +203,9 @@ TableInfo* MetaManager::InitTable(string tabledir)
             ift >> indexname >> indexid;
             nt->IndexMap[indexname] = indexid;
         }
+    }
+    else {
+        nt->newindexid = 1;
     }
     ift.close();
     return nt;
@@ -357,7 +362,6 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     ctable.open(MetaName.c_str());
     
     ctable << tableName << endl;//tablename
-    ctable << 1 << endl;
     AstType *temptype;
     AstFieldList *tfl = dynamic_cast<AstFieldList*>(ast->fieldList);
     AstIdentList *til;
@@ -478,6 +482,7 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     }
     else{
         DBInfo *tempdb = dbMap[workingDB];
+        rm->createFile(DataName.c_str(), recSize);
         TableInfo* nt = InitTable(tableDir);
         tempdb->tablenum++;
         tempdb->TableMap[tableName] = nt;
@@ -492,7 +497,6 @@ bool MetaManager::createTable(AstCreateTable* ast) {
             }
         }
 
-        rm->createFile(DataName.c_str(), nt->recSize);
         ix->createIndex(ixdir.c_str(), 0, INTEGER, 4);
     }
 
@@ -501,7 +505,6 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     /*
     database/dbname/tablename/meta.txt
     tableName
-    newid
     fieldNum
     colNum
     (colName, colType, colSpace)*
@@ -560,10 +563,8 @@ bool MetaManager::descTable(AstDesc *ast){
     if(!ift)return false;
     string temp;
     int tempcoltype,tempcolspace;
-    int newid;
 
     ift >> temp;
-    ift >> newid;
     cout << "table name: " << temp << endl;
     int fieldnum,colnum;
     ift >> fieldnum;

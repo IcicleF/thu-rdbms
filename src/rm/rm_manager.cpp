@@ -33,6 +33,7 @@ void RMManager::createFile(const char *fileName, int recordSize)
         fm -> openFile(fileName, fileId);
         b = bpm -> allocPage(fileId, 0, index, false);
         b[0] = recordSize;
+        b[3] = 1;
         bpm -> markDirty(index);
     }
 }

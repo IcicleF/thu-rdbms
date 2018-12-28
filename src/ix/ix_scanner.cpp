@@ -10,6 +10,7 @@ void IXScanner::openScan(IXHandler &ih, ScanType scantype, void *pData)
 {
     scanstatus = 1;
     this->scantype = scantype;
+    this->attrlen = ih.attrlen;
     bpt = ih.bpt;
     standard = pData;
     cur.owner = bpt;
@@ -52,7 +53,7 @@ void IXScanner::getnextRec()
     else curchild++;
 }
 
-bool IXScanner::nextRec(RID &rid)
+bool IXScanner::nextRec(RID &rid, void* inx)
 {
     if (this->scanstatus == 0)return false;
     switch(scantype)
@@ -63,6 +64,7 @@ bool IXScanner::nextRec(RID &rid)
             else{
                 if(pf){
                     rid = stdcur.rec(stdpos);
+                    memcpy(inx, stdcur.val(stdpos), attrlen);
                     pf = false;
                     return true;
                 }
@@ -75,6 +77,7 @@ bool IXScanner::nextRec(RID &rid)
                 if(cur.pageId == 0)return false;
                 if(bpt->cmp(cur.val(curchild), standard) >= 0){
                     rid = cur.rec(curchild);
+                    memcpy(inx, cur.val(curchild), attrlen);
                     getnextRec();
                     return true;
                 }
@@ -87,6 +90,7 @@ bool IXScanner::nextRec(RID &rid)
                 if(cur.pageId == 0)return false;
                 if(bpt->cmp(cur.val(curchild), standard) > 0){
                     rid = cur.rec(curchild);
+                    memcpy(inx, cur.val(curchild), attrlen);
                     getnextRec();
                     return true;
                 }
@@ -99,6 +103,7 @@ bool IXScanner::nextRec(RID &rid)
             if (bpt->cmp(cur.val(curchild), standard) > 0)pf = false;
             if (pf == false)return false;
             rid = cur.rec(curchild);
+            memcpy(inx, cur.val(curchild), attrlen);
             getnextRec();
             return true;
         }
@@ -108,6 +113,7 @@ bool IXScanner::nextRec(RID &rid)
             if (bpt->cmp(cur.val(curchild), standard) >= 0)pf = false;
             if (pf == false)return false;
             rid = cur.rec(curchild);
+            memcpy(inx, cur.val(curchild), attrlen);
             getnextRec();
             return true;
         }
@@ -117,6 +123,7 @@ bool IXScanner::nextRec(RID &rid)
                 if (cur.pageId == 0)return false;
                 if (bpt->cmp(cur.val(curchild), standard) != 0){
                     rid = cur.rec(curchild);
+                    memcpy(inx, cur.val(curchild), attrlen);
                     getnextRec();
                     return true;
                 }
@@ -128,6 +135,7 @@ bool IXScanner::nextRec(RID &rid)
             while(true){
                 if(cur.pageId == 0)return false;
                 rid = cur.rec(curchild);
+                memcpy(inx, cur.val(curchild), attrlen);
                 getnextRec();
                 return true;
             }

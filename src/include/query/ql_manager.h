@@ -5,11 +5,15 @@
 #include "meta/info.h"
 #include "rm/rm_manager.h"
 #include "rm/rm_file.h"
+#include "rm/rm_record.h"
 #include "ix/ix_manager.h"
 #include "ix/ix_handler.h"
 #include "ix/ix_scanner.h"
 #include "rid.h"
 #include <cmath>
+#include <cstring>
+#include <string>
+#include <vector>
 
 class QLManager{
     public:
@@ -20,14 +24,25 @@ class QLManager{
         bool evalAst(AstBase*);
 
         bool Insert(AstInsert*);
-        bool Delete();
+        bool Delete(AstDelete*);
         bool Select();
         bool Update();
     private:
         RMManager *rm;
         IXManager *ix;
+        void DeleteCol(std::string, IndexRM);
 
         bool checktype(AstLiteral*, ColInfo*);
+};
+
+struct IndexRM{
+    RID rid;
+    void* index;
+
+    IndexRM(RID rs, void* inx){
+        rid = RID(rs.getPage(), rs.getSlot());;
+        index = inx;
+    }
 };
 
 #endif

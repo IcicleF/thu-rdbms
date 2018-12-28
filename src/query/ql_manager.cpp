@@ -38,6 +38,7 @@ inline bool checkDate(int yy, int mm, int dd) {
 
 QLManager::QLManager()
 {
+    db_info = NULL;
     //
 }
 
@@ -55,7 +56,7 @@ bool QLManager::evalAst(AstBase* ast)
         case AST_INSERT:
             return Insert(dynamic_cast<AstInsert*>(ast));
         case AST_DELETE:
-            return Delete();
+            return Delete(dynamic_cast<AstDelete*>(ast));
         case AST_UPDATE:
             return Update();
         case AST_SELECT:
@@ -144,6 +145,8 @@ bool QLManager::Insert(AstInsert* ast)
     IXHandler* ih;
     IXScanner isc;
     RID temprid;
+    char* tempinx;
+    tempinx = new char[tb->recSize];
 
     for(int i = 0; i < sz; i++){
         vil = dynamic_cast<AstValList*>(vallists->valLists[i]);
@@ -163,7 +166,7 @@ bool QLManager::Insert(AstInsert* ast)
                 pcheck = checktype(lil, cl);
                 if (!pcheck)
                     break;
-                if(cl->isprimary){
+                if(cl->isprimary){//repeat primary key check
                     indexdir = "database/" + db_info->name + "/" + tableName + "/index";
                     ih = ix->openIndex(indexdir.c_str(), tb->IndexMap[cl->name]);
                     if(cl->type == INTEGER){
@@ -181,11 +184,11 @@ bool QLManager::Insert(AstInsert* ast)
                         stringmap[string(lil->strval)] = 1;
                         isc.openScan((*ih), ST_EQ, (void*)(lil->strval));
                     }
-                    if (isc.nextRec(temprid)) pcheck = false;
+                    if (isc.nextRec(temprid, tempinx)) pcheck = false;
                     isc.closeScan();
                     ix->closeIndex(*ih);
                 }
-                if(cl->isforeign){
+                if(cl->isforeign){//existed foreign key check
                     refTable = db_info->TableMap[cl->ref];
                     refCol = refTable->ColMap[cl->refcol];
                     indexdir = "database/" + db_info->name + "/" + refTable->name + "/index";
@@ -193,7 +196,7 @@ bool QLManager::Insert(AstInsert* ast)
                     if (refCol->type == INTEGER)isc.openScan((*ih), ST_EQ, (void*)(&lil->val));
                     if (refCol->type == FLOAT)isc.openScan((*ih), ST_EQ, (void*)(&lil->floatval));
                     if (refCol->type == STRING)isc.openScan((*ih), ST_EQ, (void*)(lil->strval));
-                    if(isc.nextRec(temprid)) pcheck = false;
+                    if(isc.nextRec(temprid, tempinx)) pcheck = false;
                     isc.closeScan();
                     ix->closeIndex(*ih);
                 }
@@ -232,7 +235,7 @@ bool QLManager::Insert(AstInsert* ast)
         ih = ix->openIndex(indexdir.c_str(), 0);
         ih->insertEntry((void *)(&(tb->newid)), temprid);
         tb->newid++;
-        ix->closeIndex(*ih);
+        rh.setNewid((unsigned int)(tb->newid));
 
         for (int j = 0; j < tb->colnum; j++){
             cl = tb->ColMap[tb->cols[j]];
@@ -247,18 +250,81 @@ bool QLManager::Insert(AstInsert* ast)
                 if (cl->type == STRING){
                     ih->insertEntry((void*)lil->strval, temprid);
                 }
-                ix->closeIndex(*ih);
             }
         }
         delete[] Data;
     }
+    ih = ix->openIndex(indexdir.c_str(), 0);
+    ix->closeIndex(*ih);
+    ih = ix->openIndex(indexdir.c_str(), 1);
+    ix->closeIndex(*ih);
+
     rm->closeFile(rh);
     return true;
 }
 
-bool QLManager::Delete()
+void QLManager::DeleteCol(string tableName, IndexRM rx)
 {
-    return false;
+    TableInfo* tb = db_info->TableMap[tableName];
+    string inxdir = "database/" + db_info->name + "/" + tableName + "/index";
+    string datadir = "database/" + db_info->name + "/" + tableName + "/data.txt";
+    IXHandler* ih = ix->openIndex(inxdir.c_str(), 0);
+    ih->deleteEntry(rx.index, rx.rid);
+    ix->closeIndex(*ih);
+    RMFile rh;
+    RMRecord rmc;
+    rh = rm->openFile(datadir.c_str());
+    rh.deleteRec(rx.rid);
+    char* tempinx;
+    tempinx = new char[tb->recSize];
+    for (int i = 0 ; i < tb->cols.size(); i++){
+        if (tb->IndexMap[tb->cols[i]] != 0){
+            ih = ix->openIndex(inxdir.c_str(), tb->IndexMap[tb->cols[i]]);
+            
+            rmc = rh.getRec(rx.rid);
+            char* inx_for_del;
+            
+            ColInfo* cl = tb->ColMap[tb->cols[i]];
+            inx_for_del = new char[cl->AttrLength];
+            rmc.getData(tempinx);
+            memcpy(inx_for_del, tempinx + cl->AttrOffset, cl->AttrLength);
+
+            ih->deleteEntry(inx_for_del, rx.rid);
+            ix->closeIndex(*ih);
+        }
+    }
+}
+
+bool QLManager::Delete(AstDelete* ast)
+{
+    if (db_info == NULL) return false;
+
+    vector<IndexRM> dels;
+    dels.clear();
+
+    string tableName = dynamic_cast<AstIdentifier*>(ast->table)->toString();
+    string datadir = "database/" + db_info->name + "/" + tableName + "/data.txt";
+    string inxdir = "database/" + db_info->name + "/" + tableName + "/index";
+
+    IXHandler* ih = ix->openIndex(inxdir.c_str(), 0);
+    IXScanner isc;
+    char* tempinx;
+    RID temprid;
+
+    tempinx = new char[ih->attrlen];
+    if (ast->whereClause == NULL) {
+        isc.openScan(*ih, ST_NOP, tempinx);
+        while (isc.nextRec(temprid, tempinx)) {
+            dels.push_back(IndexRM(temprid, tempinx));
+        }
+        isc.closeScan();
+    }
+    else {
+
+    }
+    ix->closeIndex(*ih);
+    for (int i = 0; i < dels.size(); i++)DeleteCol(tableName, dels[i]);
+    return true;
 }
 
 bool QLManager::Update()
