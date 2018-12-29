@@ -8,19 +8,19 @@ using namespace std;
 extern Global* global;
 
 any AstTopLevel::eval() {
-    try {
-        this->stmtList->eval();
-        return true;
-    }
-    catch (EvalException ex) {
-        cout << endl << ex.what() << endl;
-    }
-    return false;
+    return this->stmtList->eval();
 }
 
 any AstStmtList::eval() {
-    for (auto s : this->stmtList)
-        s->eval();
+    for (auto s : this->stmtList) {
+        try {
+            if (!any_cast<bool>(s->eval()))
+                throw EvalException("error");
+        }
+        catch (EvalException ex) {
+            cout << endl << ex.what() << endl;
+        }
+    }
     return true;
 }
 

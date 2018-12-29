@@ -6,6 +6,49 @@ using namespace std;
 
 extern Global* global;
 
+inline bool checkDate(int yy, int mm, int dd) {
+    if (yy < 1970 || yy > 9999)
+        return false;
+    if (mm < 1 || mm > 12)
+        return false;
+    if (dd < 1)
+        return false;
+    int dlim;
+    if ((mm < 8 && (mm & 1)) || (mm >= 8 && ((mm & 1) ^ 1)))
+        dlim = 31;
+    else if (mm != 2)
+        dlim = 30;
+    else {
+        dlim = 28;
+        if (yy % 4 == 0)
+            dlim = 29;
+        if (yy % 100 == 0)
+            dlim = 28;
+        if (yy % 400 == 0)
+            dlim = 29;
+    }
+    return dd <= dlim;
+}
+
+bool checkDateStr(string strval) {
+    if (strval.length() != 10)
+        return false;
+    for (int i = 0; i < 10; i++){
+        if (i == 4 || i == 7) {
+            if (strval[i] != '-' && strval[i] != '/')
+                return false;
+        }
+        else{
+            if (strval[i] > '9' || strval[i] < '0')
+                return false;
+        }
+    }
+    int year = atoi(strval.substr(0,4).c_str());
+    int month = atoi(strval.substr(5,2).c_str());
+    int day = atoi(strval.substr(8,2).c_str());
+    return checkDate(year, month, day);
+}
+
 ExprType getColumn(const RMRecord& rec, string tableName, string colName) {
     ColInfo* cInfo = NULL;
     try {
@@ -32,7 +75,7 @@ ExprType getColumn(const RMRecord& rec, string tableName, string colName) {
             result.floatval = *((float*)(data + offset));
             break;
         case STRING:
-            result.type = TYPE_CHAR;
+            result.type = cInfo->asttype;
             result.strval = new char[len + 5];
             strncpy(result.strval, data + offset, len);
             break;
@@ -90,10 +133,17 @@ bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
                 
                 bool vlStr = (vl.type != TYPE_INT) && (vl.type != TYPE_FLOAT);
                 bool vrStr = (vr.type != TYPE_INT) && (vr.type != TYPE_FLOAT);
+                bool compat = !(vlStr ^ vrStr);
+                if (compat && vl.type == TYPE_DATE) {
+                    if (wh->rhs->type == AST_COL)
+                        compat = vr.type == TYPE_DATE;
+                    else
+                        compat = checkDateStr(vr.strval);
+                }
                 
                 float diff = 0;
-                if (vlStr ^ vrStr)
-                    throw EvalException("cannot compare string and number");
+                if (compat)
+                    throw EvalException("comparing incompatible types");
                 else if (vlStr)
                     diff = (float)strcmp(vl.strval, vr.strval);
                 else

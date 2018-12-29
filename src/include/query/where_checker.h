@@ -18,6 +18,8 @@ struct ExprType {
     };
 };
 
+bool checkDateStr(string strval);
+
 ExprType getColumn(const RMRecord&, string, string);
 bool checkWhere(AstBase*, const std::map<std::string, RMRecord>&);
 ExprType calcExpr(AstBase*);
