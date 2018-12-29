@@ -28,17 +28,6 @@ struct IndexRM{
     }
 };
 
-struct IndexRM{
-    RID rid;
-    void* index;
-
-    IndexRM(RID rs, void* inx){
-        rid = RID(rs.getPage(), rs.getSlot());;
-        index = inx;
-    }
-};
-
-
 class QLManager{
     public:
         DBInfo *db_info;

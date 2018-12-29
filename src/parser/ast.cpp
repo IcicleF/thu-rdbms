@@ -153,6 +153,7 @@ any AstDelete::eval() {
         cout << "Delete value from table " << tablename << endl;
     else
         throw EvalException("Fail: cannot delete value from table " + tablename + " in current context");
+    return res;
 }
 
 any AstUpdate::eval() {
@@ -162,6 +163,7 @@ any AstUpdate::eval() {
         cout << "Update value in table " << tablename << endl;
     else
         throw EvalException("Fail: cannot update value in table " + tablename + " in current context");
+    return res;
 }
 
 any AstSelect::eval() {
@@ -170,4 +172,5 @@ any AstSelect::eval() {
         cout << "Select value succeed"  << endl;
     else
         throw EvalException("Fail: cannot select value in current context");
+    return res;
 }

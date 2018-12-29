@@ -7,7 +7,6 @@
 
 #include "parser/ast.h"
 #include "rm/rm_record.h"
-#include "global.h"
 
 struct ExprType {
     int type;
@@ -18,9 +17,9 @@ struct ExprType {
     };
 };
 
-bool checkDateStr(string strval);
+bool checkDateStr(std::string strval);
 
-ExprType getColumn(const RMRecord&, string, string);
+ExprType getColumn(const RMRecord&, std::string, std::string);
 bool checkWhere(AstBase*, const std::map<std::string, RMRecord>&);
 ExprType calcExpr(AstBase*);
 

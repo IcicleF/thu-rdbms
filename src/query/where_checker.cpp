@@ -1,4 +1,5 @@
 #include "query/where_checker.h"
+#include "global.h"
 #include <cassert>
 #include <iostream>
 
