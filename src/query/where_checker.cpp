@@ -108,7 +108,6 @@ inline ExprType fetchValue(AstCol* col, const map<string, RMRecord>& recs) {
 bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
     if (_wh == NULL)
         return true;
-    ExprType vl, vr;
     auto wh = dynamic_cast<AstWhereClause*>(_wh);
     switch (wh->val) {
         case WHERE_AND:
@@ -117,10 +116,9 @@ bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
             return checkWhere(wh->lhs, recs) || checkWhere(wh->rhs, recs);
         case WHERE_NOT:
             return !checkWhere(wh->lhs, recs);
-        case WHERE_IS_NOT_NULL:
-        case WHERE_IS_NULL:
+        default:
             {
-                ExprType vl = vl = fetchValue(dynamic_cast<AstCol*>(wh->lhs), recs);
+                ExprType vl = fetchValue(dynamic_cast<AstCol*>(wh->lhs), recs);
                 bool is_null = false;
                 if (vl.type == TYPE_INT)
                     is_null = (vl.val == -1);
@@ -128,14 +126,12 @@ bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
                     is_null = ((int)vl.floatval == -1);
                 else
                     is_null = (vl.strval[0] == (char)(-1));
-                return (wh->val == WHERE_IS_NULL) == is_null;
-            }
-        default:
-            if (isNull(wh->rhs))
-                return false;
-            {
-                ExprType vl, vr;
-                vl = fetchValue(dynamic_cast<AstCol*>(wh->lhs), recs);
+                if (wh->val == WHERE_IS_NOT_NULL || wh->val == WHERE_IS_NULL)
+                    return (wh->val == WHERE_IS_NULL) == is_null;
+            
+                if (isNull(wh->rhs) || is_null)
+                    return false;
+                ExprType vr;
                 if (wh->rhs->type == AST_COL)
                     vr = fetchValue(dynamic_cast<AstCol*>(wh->rhs), recs);
                 else
