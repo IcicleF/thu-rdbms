@@ -18,9 +18,21 @@ any AstStmtList::eval() {
                 throw EvalException("error");
         }
         catch (EvalException ex) {
-            cout << endl << ex.what() << endl;
+            cout << ex.what() << endl;
+            return false;
         }
     }
+    return true;
+}
+
+any AstSetParam::eval() {
+    string par = dynamic_cast<AstIdentifier*>(param)->toString();
+    string ret;
+    if (pval->type == AST_NULL)
+        ret = "null";
+    else
+        ret = dynamic_cast<AstLiteral*>(pval)->toString();
+    global->settings[par] = ret;
     return true;
 }
 
@@ -38,7 +50,7 @@ any AstCreateDB::eval() {
     if (res)
         cout << "Create database " << name << endl;
     else
-        throw EvalException("Fail: " + name + " already exists");
+        throw EvalException(name + " already exists");
     return res;
 }
 
@@ -48,7 +60,7 @@ any AstDropDB::eval() {
     if (res)
         cout << "Drop database " << name << endl;
     else
-        throw EvalException("Fail: " + name + " does not exist");
+        throw EvalException(name + " does not exist");
     return res;
 }
 
@@ -58,7 +70,7 @@ any AstUseDB::eval() {
     if (res)
         cout << "Switch to " << name << endl;
     else
-        throw EvalException("Fail: " + name + " does not exist");
+        throw EvalException(name + " does not exist");
     return res;
 }
 
@@ -70,7 +82,7 @@ any AstShowTables::eval() {
             cout << "    " << tb << endl;
     }
     else
-        throw EvalException("Fail: not using any database now");
+        throw EvalException("not using any database now");
     return res;
 }
 
@@ -80,7 +92,7 @@ any AstCreateTable::eval() {
     if (res)
         cout << "Create table " << name << endl;
     else
-        throw EvalException("Fail: cannot create table " + name + " in current context");
+        throw EvalException("cannot create table " + name + " in current context");
     return res;
 }
 
@@ -90,7 +102,7 @@ any AstDropTable::eval() {
     if (res)
         cout << "Delete table " << name << endl;
     else
-        throw EvalException("Fail: cannot delete table " + name + " in current context");
+        throw EvalException("cannot delete table " + name + " in current context");
     return res;
 }
 
@@ -98,7 +110,7 @@ any AstDesc::eval() {
     bool res = global->mm->evalAst(this);
     string name = dynamic_cast<AstIdentifier*>(this->name)->toString();
     if (!res)
-        throw EvalException("Fail: cannot describe table" + name + " in current context");
+        throw EvalException("cannot describe table" + name + " in current context");
     return res;
 }
 
@@ -109,7 +121,7 @@ any AstCreateIndex::eval() {
     if (res)
         cout << "Create index on " << colName << " of table " << table << endl;
     else
-        throw EvalException("Fail: cannot create index on " + colName + " of table " + table + " in current context");
+        throw EvalException("cannot create index on " + colName + " of table " + table + " in current context");
     return res;
 }
 
@@ -120,7 +132,7 @@ any AstDropIndex::eval() {
     if (res)
         cout << "Drop index on " << colName << " of table " << table << endl;
     else
-        throw EvalException("Fail: cannot delete index on " + colName + " of table " + table + " in current context");
+        throw EvalException("cannot delete index on " + colName + " of table " + table + " in current context");
     return res;
 }
 
@@ -130,6 +142,6 @@ any AstInsert::eval() {
     if (res)
         cout << "Insert value into table " << tablename << endl;
     else
-        throw EvalException("Fail: cannot insert value into table " + tablename + " in current context");
+        throw EvalException("cannot insert value into table " + tablename + " in current context");
     return res;
 }

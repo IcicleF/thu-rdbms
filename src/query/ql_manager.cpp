@@ -415,6 +415,7 @@ bool QLManager::Select(AstSelect* ast)
         int titleLen = printColumns[i].first.length() + printColumns[i].second->name.length() + 1;
         int attrWidth = printColumns[i].second->type == FLOAT ? 11 : printColumns[i].second->collimit;
         int width = max(titleLen, attrWidth);
+        width = max(width, 4);
         printOffset[i + 1] = printOffset[i] + width + 2;
         cout << printColumns[i].first << "." << printColumns[i].second->name;
         for (int j = printOffset[i] + printColumns[i].first.length(); j < printOffset[i + 1]; ++j)
@@ -431,12 +432,24 @@ bool QLManager::Select(AstSelect* ast)
             auto pc = printColumns[i];
             ExprType res = getColumn(recMp.at(pc.first), pc.first, pc.second->name);
             stringstream ss;
-            if (res.type == TYPE_INT)
-                ss << res.val;
-            else if (res.type == TYPE_FLOAT)
-                ss << res.floatval;
-            else
-                ss << res.strval;
+            if (res.type == TYPE_INT) {
+                if (res.val != -1)
+                    ss << res.val;
+                else
+                    ss << "null";
+            }
+            else if (res.type == TYPE_FLOAT) {
+                if (res.floatval != -1)
+                    ss << res.floatval;
+                else
+                    ss << "null";
+            }
+            else {
+                if (res.strval[0] != (char)(-1))
+                    ss << res.strval;
+                else
+                    ss << "null";
+            }
             string s = ss.str();
             cout << s;
             if (i != fi - 1) {

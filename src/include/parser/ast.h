@@ -207,8 +207,7 @@ class AstSetParam : public AstBase {
             this->pval = val;
         }
         virtual bool checkSemantic(SemRecorder& sm) const {
-            // now we do not set any system params
-            return false;
+            return true;
         }
         virtual void printTree(IdentPrinter& ip) const {
             ip.writeln("set system parameter");
@@ -217,6 +216,7 @@ class AstSetParam : public AstBase {
             pval->printTree(ip);
             ip.deident();
         }
+        virtual std::any eval() final;
     
     public:
         AstBase* param;

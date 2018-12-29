@@ -102,6 +102,7 @@ inline ExprType fetchValue(AstCol* col, const map<string, RMRecord>& recs) {
             throw EvalException("unknown table: " + tableName);
         return getColumn(recs.at(tableName), tableName, dynamic_cast<AstIdentifier*>(col->colName)->toString());
     }
+    return ExprType();
 }
 
 bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
@@ -117,9 +118,18 @@ bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
         case WHERE_NOT:
             return !checkWhere(wh->lhs, recs);
         case WHERE_IS_NOT_NULL:
-            return !isNull(wh->lhs);
         case WHERE_IS_NULL:
-            return isNull(wh->lhs);
+            {
+                ExprType vl = vl = fetchValue(dynamic_cast<AstCol*>(wh->lhs), recs);
+                bool is_null = false;
+                if (vl.type == TYPE_INT)
+                    is_null = (vl.val == -1);
+                else if (vl.type == TYPE_FLOAT)
+                    is_null = ((int)vl.floatval == -1);
+                else
+                    is_null = (vl.strval[0] == (char)(-1));
+                return (wh->val == WHERE_IS_NULL) == is_null;
+            }
         default:
             if (isNull(wh->rhs))
                 return false;
@@ -133,7 +143,7 @@ bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
                 
                 bool vlStr = (vl.type != TYPE_INT) && (vl.type != TYPE_FLOAT);
                 bool vrStr = (vr.type != TYPE_INT) && (vr.type != TYPE_FLOAT);
-                bool compat = !(vlStr ^ vrStr);
+                bool compat = vlStr == vrStr;
                 if (compat && vl.type == TYPE_DATE) {
                     if (wh->rhs->type == AST_COL)
                         compat = vr.type == TYPE_DATE;
@@ -142,7 +152,7 @@ bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
                 }
                 
                 float diff = 0;
-                if (compat)
+                if (!compat)
                     throw EvalException("comparing incompatible types");
                 else if (vlStr)
                     diff = (float)strcmp(vl.strval, vr.strval);

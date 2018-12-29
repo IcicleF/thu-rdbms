@@ -2,6 +2,7 @@
 #define GLOBAL_H
 
 #include <vector>
+#include <map>
 #include <string>
 
 #include "pf/bufmanager/BufPageManager.h"
@@ -15,6 +16,7 @@
 
 struct Global {
     std::vector<std::string> strList;
+    std::map<std::string, std::string> settings;
 
     MetaManager* mm;
     FileManager* fm;
