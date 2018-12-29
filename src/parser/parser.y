@@ -38,13 +38,11 @@ Program:    StmtList {
                     exit(0);
                 //$$->printTree(*ip);
                 try {
-                    if (std::any_cast<bool>($$->eval()))
-                        std::cout << std::endl << "*** Database Operation Success ***" << std::endl;
-                    else
-                        std::cout << std::endl << "*** FAILED ***" << std::endl;
+                    if (!std::any_cast<bool>($$->eval()))
+                        std::cout << std::endl << "FAILED" << std::endl;
                 }
                 catch (std::bad_any_cast ex) {
-                    std::cout << std::endl << "*** UNEXPECTED ERROR: Contact programmer please ***" << std::endl;
+                    std::cout << std::endl << "UNEXPECTED ERROR" << std::endl;
                 }
                 delete ip;
                 delete sm;

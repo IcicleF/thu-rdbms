@@ -17,30 +17,6 @@ inline int pow10lim(int x) {
         res *= 10;
     return res - 1;
 }
-inline bool checkDate(int yy, int mm, int dd) {
-    if (yy < 1970 || yy > 9999)
-        return false;
-    if (mm < 1 || mm > 12)
-        return false;
-    if (dd < 1)
-        return false;
-    int dlim;
-    if ((mm < 8 && (mm & 1)) || (mm >= 8 && ((mm & 1) ^ 1)))
-        dlim = 31;
-    else if (mm != 2)
-        dlim = 30;
-    else {
-        dlim = 28;
-        if (yy % 4 == 0)
-            dlim = 29;
-        if (yy % 100 == 0)
-            dlim = 28;
-        if (yy % 400 == 0)
-            dlim = 29;
-    }
-    return dd <= dlim;
-}
-
 
 QLManager::QLManager()
 {
@@ -80,7 +56,7 @@ bool QLManager::checktype(AstLiteral* ast, ColInfo* cl)
     if(temptype != cl->type)return false;
     
     string strval;
-    int limval,year,month,day;
+    int limval;
 
     if (cl->collimit != -1){
         if (temptype == INTEGER){
@@ -97,19 +73,7 @@ bool QLManager::checktype(AstLiteral* ast, ColInfo* cl)
 
     if (cl->asttype == TYPE_DATE){
         strval = string(ast->strval);
-        if (strval.length() != 10) return false;
-        for (int i = 0; i < 10; i++){
-            if (i == 4 || i == 7) {
-                if (strval[i] != '-' && strval[i] != '/') return false;
-            }
-            else{
-                if (strval[i] > '9' || strval[i] < '0') return false;
-            }
-        }
-        year = atoi(strval.substr(0,4).c_str());
-        month = atoi(strval.substr(5,2).c_str());
-        day = atoi(strval.substr(8,2).c_str());
-        if (!checkDate(year, month, day))
+        if (!checkDateStr(strval))
             return false;
     }
     return true;
@@ -595,6 +559,8 @@ struct TableEnumerator {
 // SELECT [Selector] FROM [TableList] WHERE [WhereClause]
 bool QLManager::Select(AstSelect* ast)
 {
+    if (db_info == NULL)
+        return false;
     auto selector = dynamic_cast<AstSelector*>(ast->selector)->colList;
     auto tableList = dynamic_cast<AstIdentList*>(ast->tableList);
 
@@ -657,6 +623,7 @@ bool QLManager::Select(AstSelect* ast)
         int titleLen = printColumns[i].first.length() + printColumns[i].second->name.length() + 1;
         int attrWidth = printColumns[i].second->type == FLOAT ? 11 : printColumns[i].second->collimit;
         int width = max(titleLen, attrWidth);
+        width = max(width, 4);
         printOffset[i + 1] = printOffset[i] + width + 2;
         cout << printColumns[i].first << "." << printColumns[i].second->name;
         for (int j = printOffset[i] + printColumns[i].first.length(); j < printOffset[i + 1]; ++j)
@@ -673,12 +640,24 @@ bool QLManager::Select(AstSelect* ast)
             auto pc = printColumns[i];
             ExprType res = getColumn(recMp.at(pc.first), pc.first, pc.second->name);
             stringstream ss;
-            if (res.type == TYPE_INT)
-                ss << res.val;
-            else if (res.type == TYPE_FLOAT)
-                ss << res.floatval;
-            else
-                ss << res.strval;
+            if (res.type == TYPE_INT) {
+                if (res.val != -1)
+                    ss << res.val;
+                else
+                    ss << "null";
+            }
+            else if (res.type == TYPE_FLOAT) {
+                if (res.floatval != -1)
+                    ss << res.floatval;
+                else
+                    ss << "null";
+            }
+            else {
+                if (res.strval[0] != (char)(-1))
+                    ss << res.strval;
+                else
+                    ss << "null";
+            }
             string s = ss.str();
             cout << s;
             if (i != fi - 1) {
@@ -689,4 +668,5 @@ bool QLManager::Select(AstSelect* ast)
         cout << endl;
     };
     te.Enumerate(0, ast->whereClause, callback);
+    return true;
 }
