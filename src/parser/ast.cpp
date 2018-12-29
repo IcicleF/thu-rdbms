@@ -133,3 +133,29 @@ any AstInsert::eval() {
         throw EvalException("Fail: cannot insert value into table " + tablename + " in current context");
     return res;
 }
+
+any AstDelete::eval() {
+    bool res = global->ql->evalAst(this);
+    string tablename = dynamic_cast<AstIdentifier*>(this->table)->toString();
+    if (res)
+        cout << "Delete value from table " << tablename << endl;
+    else
+        throw EvalException("Fail: cannot delete value from table " + tablename + " in current context");
+}
+
+any AstUpdate::eval() {
+    bool res = global->ql->evalAst(this);
+    string tablename = dynamic_cast<AstIdentifier*>(this->table)->toString();
+    if (res)
+        cout << "Update value in table " << tablename << endl;
+    else
+        throw EvalException("Fail: cannot update value in table " + tablename + " in current context");
+}
+
+any AstSelect::eval() {
+    bool res = global->ql->evalAst(this);
+    if (res)
+        cout << "Select value succeed"  << endl;
+    else
+        throw EvalException("Fail: cannot select value in current context");
+}

@@ -400,6 +400,7 @@ class AstDelete : public AstBase {
                 ip.writeln("(all)");
             ip.deident();
         }
+        virtual std::any eval() final;
 
     public:
         AstBase* table;
@@ -427,6 +428,7 @@ class AstUpdate : public AstBase {
                 ip.writeln("(all)");
             ip.deident();
         }
+        virtual std::any eval() final;
 
     public:
         AstBase* table;
@@ -455,7 +457,8 @@ class AstSelect : public AstBase {
                 ip.writeln("(all)");
             ip.deident();
         }
-    
+        virtual std::any eval() final;
+
     public:
         AstBase* selector;
         AstBase* tableList;

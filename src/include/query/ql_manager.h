@@ -9,11 +9,24 @@
 #include "ix/ix_manager.h"
 #include "ix/ix_handler.h"
 #include "ix/ix_scanner.h"
+#include "query/where_checker.h"
 #include "rid.h"
 #include <cmath>
 #include <cstring>
 #include <string>
 #include <vector>
+#include <iterator>
+#include <map>
+
+struct IndexRM{
+    RID rid;
+    void* index;
+
+    IndexRM(RID rs, void* inx){
+        rid = RID(rs.getPage(), rs.getSlot());;
+        index = inx;
+    }
+};
 
 class QLManager{
     public:
@@ -26,23 +39,13 @@ class QLManager{
         bool Insert(AstInsert*);
         bool Delete(AstDelete*);
         bool Select(AstSelect*);
-        bool Update();
+        bool Update(AstUpdate*);
     private:
         RMManager *rm;
         IXManager *ix;
         void DeleteCol(std::string, IndexRM);
-
+        void UpdateCol(std::string, RMRecord, const std::map<string, ExprType*>&);
         bool checktype(AstLiteral*, ColInfo*);
-};
-
-struct IndexRM{
-    RID rid;
-    void* index;
-
-    IndexRM(RID rs, void* inx){
-        rid = RID(rs.getPage(), rs.getSlot());;
-        index = inx;
-    }
 };
 
 #endif
