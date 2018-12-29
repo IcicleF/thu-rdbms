@@ -15,6 +15,17 @@
 #include <string>
 #include <vector>
 
+struct IndexRM{
+    RID rid;
+    void* index;
+
+    IndexRM(RID rs, void* inx){
+        rid = RID(rs.getPage(), rs.getSlot());;
+        index = inx;
+    }
+};
+
+
 class QLManager{
     public:
         DBInfo *db_info;
@@ -33,16 +44,6 @@ class QLManager{
         void DeleteCol(std::string, IndexRM);
 
         bool checktype(AstLiteral*, ColInfo*);
-};
-
-struct IndexRM{
-    RID rid;
-    void* index;
-
-    IndexRM(RID rs, void* inx){
-        rid = RID(rs.getPage(), rs.getSlot());;
-        index = inx;
-    }
 };
 
 #endif
