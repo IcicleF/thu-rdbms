@@ -69,6 +69,7 @@ bool BPlusTree::searchEntry(void* pData, RID& rid) {
 
 // insert at leaf
 void BPlusTree::insertEntry(void* pData, const RID& rid) {
+    printf("insert entry at pg %d sl %d\n", rid.getPage(), rid.getSlot());
     traceToLeaf(pData);
     int l = cur.count();
     int par = cur.parent();
@@ -618,8 +619,10 @@ void BPlusTree::printTree() {
                 cout << "   Rec: ";
 
                 uchar* base = (uchar*)v.val(i);
-                for (int j = 0; j < attrLen; ++j)
-                    cout << (char)(*(base + j));
+                for (int j = 0; j < attrLen; ++j) {
+                    int x = int(*(base + j));
+                    cout << "0123456789ABCDEF"[x / 16] << "0123456789ABCDEF"[x % 16] << " ";
+                }
                 cout << endl;
             }
             cout << "   Next Page : Page #" << v.child(l) << endl;
@@ -631,8 +634,10 @@ void BPlusTree::printTree() {
                 cout << "   Rec: ";
 
                 uchar* base = (uchar*)v.val(i);
-                for (int j = 0; j < attrLen; ++j)
-                    cout << (char)(*(base + j));
+                for (int j = 0; j < attrLen; ++j) {
+                    int x = int(*(base + j));
+                    cout << "0123456789ABCDEF"[x / 16] << "0123456789ABCDEF"[x % 16] << " ";
+                }
                 cout << endl;
                 Q.push(v.child(i));
             }

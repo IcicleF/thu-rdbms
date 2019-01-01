@@ -57,7 +57,7 @@ DBInfo* MetaManager::InitDB(string dbName)
             if (!stat(subdir.c_str(), &sbuf))
                 if (S_ISDIR(sbuf.st_mode)){
                     nt->tablenum++;
-                    nt->TableMap[string(p->d_name)] = InitTable(subdir);
+                    nt->TableMap[string(p->d_name)] = InitTable(dbName, subdir);
                 }
         }
         closedir(dir);
@@ -65,7 +65,7 @@ DBInfo* MetaManager::InitDB(string dbName)
     return nt;
 }
 
-TableInfo* MetaManager::InitTable(string tabledir)
+TableInfo* MetaManager::InitTable(string db, string tabledir)
 {
     string Metadir = tabledir + "/meta.txt";
     string indexdir = tabledir + "/index.txt";
@@ -81,6 +81,7 @@ TableInfo* MetaManager::InitTable(string tabledir)
     
     TableInfo* nt;
     nt = new TableInfo();
+    nt->db = db;
     nt->name = tbName;
 
     ifstream ift;
@@ -99,8 +100,9 @@ TableInfo* MetaManager::InitTable(string tabledir)
     
     string datadir = tabledir + "/data.txt";
     //cout << "data is " << datadir << endl;
-    RMFile rh = rm->openFile(datadir.c_str());
-    nt->newid = (int) rh.getNewid();
+    FILE *fid = fopen((tabledir + "/newid.txt").c_str(), "r");
+    fscanf(fid, "%d", &(nt->newid));
+    fclose(fid);
     
     recSize = 0;
     for (int i = 0; i < colnum; i++){
@@ -331,9 +333,14 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     string MetaName = tableDir + "/meta.txt";
     string DataName = tableDir + "/data.txt";
     string ixdir = tableDir + "/index";
+    string newidName = tableDir + "/newid.txt";
     
     bool ret = ensureDirectory(tableDir.c_str());
     if (ret == false) return false;
+
+    FILE* fid = fopen(newidName.c_str(), "w");
+    fprintf(fid, "1\n");
+    fclose(fid);
 
     ofstream ctable;
     ifstream iref;
@@ -461,8 +468,9 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     }
     else{
         DBInfo *tempdb = dbMap[workingDB];
+        cout << "recSize is " << recSize << endl;
         rm->createFile(DataName.c_str(), recSize);
-        TableInfo* nt = InitTable(tableDir);
+        TableInfo* nt = InitTable(workingDB, tableDir);
         tempdb->tablenum++;
         tempdb->TableMap[tableName] = nt;
         ColInfo *cl;

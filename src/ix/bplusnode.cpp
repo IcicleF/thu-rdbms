@@ -5,6 +5,7 @@ using namespace std;
 
 void BPlusNode::getPage() {
     page = (CharBufType)owner->bpm->getPage(owner->fileId, pageId, pageIndex);
+    owner->usedPages.insert(pageIndex);
 }
 void BPlusNode::clear() {
     memset(page + 10, 0, PAGE_SIZE - 10);

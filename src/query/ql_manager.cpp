@@ -142,6 +142,7 @@ bool QLManager::Insert(AstInsert* ast)
                 if(cl->isprimary){//repeat primary key check
                     indexdir = "database/" + db_info->name + "/" + tableName + "/index";
                     ih1 = ix->openIndex(indexdir.c_str(), tb->IndexMap[cl->name]);
+                    ih1->bpt->printTree();
                     tempinx = new char[ih1->attrlen];
                     printf("      index opened\n");
                     if(cl->type == INTEGER){
@@ -159,11 +160,12 @@ bool QLManager::Insert(AstInsert* ast)
                         stringmap[string(colval->strval)] = 1;
                         isc.openScan((*ih1), ST_EQ, (void*)(colval->strval));
                     }
-                    //printf("      scan opened\n");
+                    printf("      scan opened\n");
                     if (isc.nextRec(temprid, tempinx)) pcheck = false;
                     isc.closeScan();
-                    //printf("      scan closed, pcheck=%s\n", pcheck ? "true" : "false");
+                    printf("      scan closed, pcheck=%s\n", pcheck ? "true" : "false");
                     ix->closeIndex(*ih1);
+                    printf("      index closed\n");
                 }
                 if(cl->isforeign){//existed foreign key check
                     refTable = db_info->TableMap[cl->ref];
@@ -189,8 +191,8 @@ bool QLManager::Insert(AstInsert* ast)
         cout << "type imcompatible" << endl;
         return false;
     }
+    printf("check fin!\n");
     string datadir = "database/" + db_info->name + "/" + tableName + "/data.txt";
-    RMFile rh = rm->openFile(datadir.c_str());
     char* Data;
     
     indexdir = "database/" + db_info->name + "/" + tableName + "/index";
@@ -205,6 +207,7 @@ bool QLManager::Insert(AstInsert* ast)
         Data = new char[tb->recSize];
         for (int j = 0; j < tb->colnum; j++){
             cl = tb->ColMap[tb->cols[j]];
+            //printf("   offset %d\n", cl->AttrOffset);
             if (vil->valList[j]->type == AST_KEYWORD){
                 if (cl->type == INTEGER){
                     strncpy(Data + cl->AttrOffset, (char *)(&nullint), cl->AttrLength);
@@ -229,12 +232,19 @@ bool QLManager::Insert(AstInsert* ast)
                 }
             }
         }
+        printf("data is (%d)<", tb->recSize);
+        for (int i = 0; i < tb->recSize; ++i)
+            printf("%02x ", Data[i]);
+        printf(">\n");
+
+        RMFile rh = rm->openFile(datadir.c_str());
         temprid = rh.insertRec(Data);
+        rm->closeFile(rh);
+        printf("rid = pg %d, sl %d\n", temprid.getPage(), temprid.getSlot());
         
         ih0 = ix->openIndex(indexdir.c_str(), 0);
         ih0->insertEntry((void *)(&(tb->newid)), temprid);
-        tb->newid++;
-        rh.setNewid((unsigned int)(tb->newid));
+        tb->updateNewid();
 
         printf("   index updated!\n");
 
@@ -243,45 +253,29 @@ bool QLManager::Insert(AstInsert* ast)
             if (cl->isprimary){
                 printf("   %d col update primary\n", j);
                 ih1 = ix->openIndex(indexdir.c_str(), 1);
-                if (vil->valList[j]->type == AST_KEYWORD){
-                    nullstr = new char[cl->AttrLength];
-                    for (int k = 0; k < cl->AttrLength; k++)nullstr[i] = 0;
-                    nullstr[0] = -1;
-                    nullint = -1;
-                    nullfloat = -1;
-                    if (cl->type == INTEGER){
-                        ih1->insertEntry((void*)(&nullint), temprid);
-                    }
-                    if (cl->type == FLOAT){
-                        ih1->insertEntry((void*)(&nullfloat), temprid);
-                    }
-                    if (cl->type == STRING){
-                        ih1->insertEntry((void*)nullstr, temprid);
-                    }
-                }
-                else{
-                    
-                    printf("   here\n");
+                try {
                     colval = dynamic_cast<AstLiteral*>(vil->valList[j]);
-                    if (cl->type == INTEGER){
-                        ih1->insertEntry((void*)(&colval->val), temprid);
-                    }
-                    if (cl->type == FLOAT){
-                        ih1->insertEntry((void*)(&colval->floatval), temprid);
-                    }
-                    if (cl->type == STRING){
-                        ih1->insertEntry((void*)colval->strval, temprid);
-                    }
-                    printf("   insert fin\n");
                 }
+                catch (exception e) {
+                    cout << "primary key cannot be null" << endl;
+                    return false;
+                }
+                if (cl->type == INTEGER){
+                    ih1->insertEntry((void*)(&colval->val), temprid);
+                }
+                if (cl->type == FLOAT){
+                    ih1->insertEntry((void*)(&colval->floatval), temprid);
+                }
+                if (cl->type == STRING){
+                    ih1->insertEntry((void*)colval->strval, temprid);
+                }
+                printf("   insert fin\n");
             }
         }
         delete[] Data;
     }
     ix->closeIndex(*ih0);
     ix->closeIndex(*ih1);
-
-    rm->closeFile(rh);
     delete[] nullstr;
     return true;
 }

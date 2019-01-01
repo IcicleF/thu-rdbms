@@ -59,18 +59,7 @@ class RMFile {
             int ind;
             BufType b = bpmgr->getPage(fileId, 0, ind);
             recSize = int(b[0]);
-        }
-        int getNewid() {
-            int ind;
-            BufType b = bpmgr->getPage(fileId, 0, ind);
-            return int(b[3]);
-        }
-        void setNewid(unsigned int x) {
-            int ind;
-            BufType b = bpmgr->getPage(fileId, 0, ind);
-            b[3] = x;
-            bpmgr->markDirty(ind);
-            bpmgr->writeBack(ind);
+            std::cout << "recSize is " << recSize << std::endl;
         }
         static void formatPage(CharBufType cb) {
             ShortBufType b = (ShortBufType)cb;

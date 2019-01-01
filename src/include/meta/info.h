@@ -26,14 +26,14 @@ class ColInfo{
 
 class TableInfo{
     public:
-        std::string name;
+        std::string db, name;
         int colnum,recSize;
         std::map <std::string, ColInfo*> ColMap;
         
         std::map <std::string, int> IndexMap;//rank = 1
         std::vector<std::string> cols;
 
-        int newindexid,newid;
+        int newindexid, newid;
 
         TableInfo(){
             colnum = 0;
@@ -43,6 +43,12 @@ class TableInfo{
             recSize = 0;
             newindexid = 1;
             newid = 1;
+        }
+        void updateNewid() {
+            ++newid;
+            FILE* fid = fopen((std::string("database/") + db + "/" + name + "/newid.txt").c_str(), "w");
+            fprintf(fid, "%d\n", newid);
+            fclose(fid);
         }
 };
 

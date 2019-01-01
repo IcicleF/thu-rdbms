@@ -1,6 +1,7 @@
 #ifndef BPLUS_H
 #define BPLUS_H
 
+#include <set>
 #include <functional>
 #include "ix/bplusnode.h"
 
@@ -13,7 +14,9 @@ class BPlusTree {
     friend class IXScanner;
 
     public:
+        std::set<int> usedPages;
         std::function<int(void*, void*)> cmp;
+        BufPageManager* bpm;
 
     public:
         BPlusTree();
@@ -27,7 +30,6 @@ class BPlusTree {
         void printTree();
 
     private:
-        BufPageManager* bpm;
         int fileId;
         int attrLen, fanOut;
 

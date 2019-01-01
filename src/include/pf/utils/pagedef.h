@@ -6,7 +6,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
-
 /*
  * 一个页面中的字节数
  */
@@ -45,13 +44,11 @@
 #define MAX_TB_NUM 31
 #define RELEASE 1
 typedef unsigned int* BufType;
+typedef unsigned short* ShortBufType;
+typedef unsigned char* CharBufType;
 typedef unsigned int uint;
 typedef unsigned short ushort;
 typedef unsigned char uchar;
-
-typedef ushort* ShortBufType;
-typedef uchar* CharBufType;
-
 typedef unsigned long long ull;
 typedef long long ll;
 typedef double db;

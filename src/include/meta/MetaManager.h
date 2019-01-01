@@ -45,7 +45,7 @@ class MetaManager {
         QLManager *ql;
         
         DBInfo* InitDB(std::string);
-        TableInfo* InitTable(std::string);
+        TableInfo* InitTable(std::string, std::string);
 
         bool ensureDirectory(const char*);
         int removeDirectory(const char*);

@@ -1,7 +1,7 @@
 #ifndef FILE_TABLE
 #define FILE_TABLE
 #include <string>
-#include "pf/utils/MyBitMap.h"
+#include "../utils/MyBitMap.h"
 #include <map>
 #include <vector>
 #include <set>

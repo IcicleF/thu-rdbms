@@ -1,11 +1,11 @@
 #ifndef BUF_PAGE_MANAGER
 #define BUF_PAGE_MANAGER
-#include "pf/utils/MyHashMap.h"
-#include "pf/utils/MyBitMap.h"
-#include "pf/bufmanager/FindReplace.h"
-#include "pf/utils/pagedef.h"
-#include "pf/fileio/FileManager.h"
-#include "pf/utils/MyLinkList.h"
+#include "../utils/MyHashMap.h"
+#include "../utils/MyBitMap.h"
+#include "FindReplace.h"
+#include "../utils/pagedef.h"
+#include "../fileio/FileManager.h"
+#include "../utils/MyLinkList.h"
 /*
  * BufPageManager
  * 实现了一个缓存的管理器

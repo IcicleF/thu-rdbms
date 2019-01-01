@@ -35,7 +35,8 @@ void RMManager::createFile(const char *fileName, int recordSize)
         b[0] = recordSize;
         b[3] = 1;
         bpm -> markDirty(index);
-        bpm->writeBack(index);
+        bpm -> writeBack(index);
+        fm -> closeFile(fileId);
     }
 }
 

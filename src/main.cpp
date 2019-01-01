@@ -95,7 +95,6 @@ void testInfo()
 }
 */
 int main() {
-    
     global = new Global();
     while (true) {
         cout << "> ";

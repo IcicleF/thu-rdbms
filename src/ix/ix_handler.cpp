@@ -43,10 +43,17 @@ IXHandler::~IXHandler()
 }
 
 int IXHandler::insertEntry(void* pData, const RID& rid) {
+    bpt->usedPages.clear();
     bpt->insertEntry(pData, rid);
+    for (int p : bpt->usedPages)
+        bpt->bpm->writeBack(p);
     return 0;
 }
 
 int IXHandler::deleteEntry(void* pData, const RID& rid) {
-    return bpt->deleteEntry(pData, rid);
+    bpt->usedPages.clear();
+    int res = bpt->deleteEntry(pData, rid);
+    for (int p : bpt->usedPages)
+        bpt->bpm->writeBack(p);
+    return res;
 }
