@@ -35,11 +35,14 @@ struct Global {
     }
 
     ~Global() {
-        delete rm;
-        delete ix;
-        delete bpm;
-        delete fm;
         delete mm;
+        delete ql;
+        delete ix;
+        delete rm;
+        bpm->close();
+        delete bpm;
+        fm->shutdown();
+        delete fm;
     }
 };
 

@@ -5,30 +5,7 @@ using namespace std;
 
 extern Global* global;
 
-MetaManager::MetaManager() {
-    dbMap.clear();
-    dbnum = 0;
-    ensureDirectory("database");
-    DIR *dir;
-    dir = opendir("database");
-    int r = 0;
-    if (dir) {
-        dirent* p;
-        while (!r && (p = readdir(dir))) {
-            if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
-                continue;
-            string subdir = "database/";
-            subdir += p->d_name;
-            struct stat sbuf;
-            if (!stat(subdir.c_str(), &sbuf))
-                if (S_ISDIR(sbuf.st_mode)){
-                    dbnum++;
-                    dbMap[string(p->d_name)] = InitDB(string(p->d_name));
-                }
-        }
-        closedir(dir);
-    }
-}
+MetaManager::MetaManager() {}
 
 MetaManager::MetaManager(RMManager *rm, IXManager *ix, QLManager *ql)
 {
@@ -40,10 +17,10 @@ MetaManager::MetaManager(RMManager *rm, IXManager *ix, QLManager *ql)
     ensureDirectory("database");
     DIR *dir;
     dir = opendir("database");
-    int r = 0;
+    
     if (dir) {
         dirent* p;
-        while (!r && (p = readdir(dir))) {
+        while (p = readdir(dir)) {
             if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
                 continue;
             string subdir = "database/";
@@ -97,16 +74,19 @@ TableInfo* MetaManager::InitTable(string tabledir)
 
     len = tabledir.length();
     idx = tabledir.find("/", 0);
-    tbName = tabledir.substr(idx+1, len-idx);
-
+    tbName = tabledir; reverse(tbName.begin(), tbName.end());
+    int pos = 0; for (; tbName[pos] != '/'; ++pos);
+    tbName = tbName.substr(0, pos); reverse(tbName.begin(), tbName.end());
+    //cout << "tbName is " << tbName << endl;
+    
     TableInfo* nt;
     nt = new TableInfo();
     nt->name = tbName;
 
     ifstream ift;
     ift.open(Metadir.c_str());
-    if (!ift) return nt;
-
+    if (!ift) { cout << "!" << endl; return nt; }
+    
     int fieldnum,colnum,recSize,newid;
     string field,colname,tablename,notnull;
     int fieldtype,coltype,colspace;
@@ -116,11 +96,12 @@ TableInfo* MetaManager::InitTable(string tabledir)
     nt->name = tablename;
     ift >> fieldnum >> colnum;
     nt->colnum = colnum;
-
-    string datadir = tabledir + "/data.txt"; 
+    
+    string datadir = tabledir + "/data.txt";
+    //cout << "data is " << datadir << endl;
     RMFile rh = rm->openFile(datadir.c_str());
     nt->newid = (int) rh.getNewid();
-
+    
     recSize = 0;
     for (int i = 0; i < colnum; i++){
         ift >> colname >> coltype >> colspace;
@@ -147,7 +128,6 @@ TableInfo* MetaManager::InitTable(string tabledir)
             tcol->type = STRING;
         }
     }
-
     nt->recSize = recSize;
 
     int colindex,collimit,prinum;
@@ -209,7 +189,6 @@ TableInfo* MetaManager::InitTable(string tabledir)
     }
     ift.close();
     return nt;
-
 }
 
 bool MetaManager::evalAst(AstBase* ast) {

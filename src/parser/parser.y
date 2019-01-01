@@ -38,21 +38,21 @@ Program:    StmtList {
                     exit(0);
                 //$$->printTree(*ip);
                 try {
-                    if (!std::any_cast<bool>($$->eval()))
-                        std::cout << std::endl << "FAILED" << std::endl;
+                    std::any_cast<bool>($$->eval());
                 }
                 catch (std::bad_any_cast ex) {
                     std::cout << std::endl << "UNEXPECTED ERROR" << std::endl;
+                    exit(1);
                 }
                 delete ip;
                 delete sm;
             };
 
-StmtList:   Stmt ';' {
+StmtList:   Stmt {
                 $$ = new AstStmtList(NULL, $1);
             }|
-            StmtList Stmt ';' {
-                $$ = new AstStmtList($1, $2);
+            /* empty */ {
+                exit(0);
             };
 
 Stmt:       SHOW DATABASES {

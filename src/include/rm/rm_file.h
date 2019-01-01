@@ -70,6 +70,7 @@ class RMFile {
             BufType b = bpmgr->getPage(fileId, 0, ind);
             b[3] = x;
             bpmgr->markDirty(ind);
+            bpmgr->writeBack(ind);
         }
         static void formatPage(CharBufType cb) {
             ShortBufType b = (ShortBufType)cb;

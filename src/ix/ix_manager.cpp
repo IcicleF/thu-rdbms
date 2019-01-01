@@ -7,7 +7,8 @@ IXManager::IXManager(FileManager *fm, BufPageManager *bpm)
 }
 
 IXManager::~IXManager() {
-    // Nothing special.
+    for (auto file : fileIds)
+        fm->closeFile(file.second);
 }
 
 int IXManager::createIndex(const char *fileName, int indexNo, AttrType attrtype, int attrLength)
@@ -20,16 +21,20 @@ int IXManager::createIndex(const char *fileName, int indexNo, AttrType attrtype,
     fm->createFile(ss.c_str());
     fm->openFile(ss.c_str(), fileId);
     b = bpm->allocPage(fileId, 0, index, false);
+    memset(b, 0, PAGE_SIZE);
     b[0] = attrLength;
     b[1] = attrtype;
     b[2] = 1;//num of node
     b[3] = 1;
     //init
     bpm->markDirty(index);
+    bpm->writeBack(index);
     b = bpm->allocPage(fileId, 1, index, false);
+    memset(b, 0, PAGE_SIZE);
     b[0] = 0x00020000;
     bpm->markDirty(index);
     bpm->writeBack(index);
+    fm->closeFile(fileId);
     return 0;
 }
 
@@ -40,18 +45,9 @@ IXHandler* IXManager::openIndex(const char *fileName, int indexNo)
     BufType b;
 
     ss = fileName + to_string(indexNo) + ".index";
-
-    if (fileIds.find(ss) != fileIds.end())
-        return NULL;
-
     int fileId;
-    if( !(fm->openFile(ss.c_str(), fileId)) ) {
-        //error
-        return NULL;
-    }
-
+    fm->openFile(ss.c_str(), fileId);
     fileIds[ss] = fileId;
-
     b = bpm->getPage(fileId, 0, index);
 
     BPlusTree *bpt;
@@ -63,18 +59,9 @@ IXHandler* IXManager::openIndex(const char *fileName, int indexNo)
 
 int IXManager::closeIndex(IXHandler &ih)
 {
-    if (fileIds.find(ih.fileName) != fileIds.end()) {
-        fm->closeFile(fileIds[ih.fileName]);
-        fileIds.erase(ih.fileName);
-    }
     return 0;
 }
 
 int IXManager::destroyIndex(const char* fileName, int indexNo) {
-    string fn = string(fileName) + to_string(indexNo) + ".index";
-    if (fileIds.find(fn) != fileIds.end()) {
-        fm->closeFile(fileIds[fn]);
-        fileIds.erase(fn);
-    }
-    remove(fn.c_str());
+    return 0;
 }

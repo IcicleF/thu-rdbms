@@ -40,11 +40,13 @@ class BPlusTree {
             bpm->getPage(fileId, 0, p0Index);
             p0[2] = _nodeNum = nn;
             bpm->markDirty(p0Index);
+            bpm->writeBack(p0Index);
         }
         void setRoot(int r) {
             bpm->getPage(fileId, 0, p0Index);
             p0[3] = _root = r;
             bpm->markDirty(p0Index);
+            bpm->writeBack(p0Index);
         }
         
         BPlusNode cur;

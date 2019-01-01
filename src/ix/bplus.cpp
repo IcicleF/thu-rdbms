@@ -17,6 +17,7 @@ BPlusTree::BPlusTree(BufPageManager* bpm, int fileId) {
     this->attrLen = p0[0];
     this->_nodeNum = p0[2];
     this->_root = p0[3];
+    //cout << attrLen << " " << _nodeNum << " " << _root << endl;
     fanOut = (PAGE_SIZE - 16) / (attrLen + 6) + 1;
     //fanOut = 4;             // 测试用！！！
     if (fanOut & 1)
@@ -55,7 +56,7 @@ bool BPlusTree::searchEntry(void* pData, RID& rid) {
     int l = cur.count();
     for (int i = 0, r; i < l; ++i) {
         r = cmp(pData, cur.val(i));
-        if (r > 0)
+        if (r < 0)
             break;
         if (r == 0) {
             rid = cur.rec(i);

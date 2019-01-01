@@ -75,7 +75,7 @@ WHITESPACE      ([ \t]+)
 "="             { yylval = new AstOper('='); return '='; }
 "<"             { yylval = new AstOper('<'); return '<'; }
 ">"             { yylval = new AstOper('>'); return '>'; }
-";"             { yylval = new AstOper(';'); return ';'; }
+";"             { yyterminate(); }
 "."             { yylval = new AstOper('.'); return '.'; }
 "<="            { yylval = new AstOper(LESS_EQ, "<="); return LESS_EQ; }
 ">="            { yylval = new AstOper(GREATER_EQ, ">="); return GREATER_EQ; }

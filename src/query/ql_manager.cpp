@@ -112,23 +112,26 @@ bool QLManager::Insert(AstInsert* ast)
     ColInfo* refCol;
 
     string indexdir;
-    IXHandler* ih;
+    IXHandler *ih0, *ih1;
     IXScanner isc;
     RID temprid;
     char* tempinx;
 
+    printf("sz = %d\n", sz);
+
     for(int i = 0; i < sz; i++){
+        printf("   i = %d\n", i);
         vil = dynamic_cast<AstValList*>(vallists->valLists[i]);
         int vsz = vil->valList.size();
         if(vsz != tb->colnum){
             pcheck = false;
             break;
         }
+        //printf("   vsz = %d\n", vsz);
         for(int j = 0; j < vsz; j++){
+            //printf("      j = %d\n", j);
             cl = tb->ColMap[tb->cols[j]];
             if (vil->valList[j]->type == AST_KEYWORD){
-                //kwd = dynamic_cast<AstKeyword*>(vil->valList[j]);
-                //if (kwd->name != "SQLNULL") pcheck = false;
                 if (cl->notnull == true || cl->isprimary == true) pcheck = false;
             }
             else if (vil->valList[j]->type == AST_LITERAL){
@@ -138,39 +141,42 @@ bool QLManager::Insert(AstInsert* ast)
                     break;
                 if(cl->isprimary){//repeat primary key check
                     indexdir = "database/" + db_info->name + "/" + tableName + "/index";
-                    ih = ix->openIndex(indexdir.c_str(), tb->IndexMap[cl->name]);
-                    tempinx = new char[ih->attrlen];
+                    ih1 = ix->openIndex(indexdir.c_str(), tb->IndexMap[cl->name]);
+                    tempinx = new char[ih1->attrlen];
+                    printf("      index opened\n");
                     if(cl->type == INTEGER){
                         if(intmap[colval->val] != 0)pcheck = false;
                         intmap[colval->val] = 1;
-                        isc.openScan((*ih), ST_EQ, (void*)(&colval->val));
+                        isc.openScan((*ih1), ST_EQ, (void*)(&colval->val));
                     }
                     if(cl->type == FLOAT){
                         if(floatmap[colval->floatval] != 0)pcheck = false;
                         floatmap[colval->floatval] = 1;
-                        isc.openScan((*ih), ST_EQ, (void*)(&colval->floatval));
+                        isc.openScan((*ih1), ST_EQ, (void*)(&colval->floatval));
                     }
                     if(cl->type == STRING){
                         if(stringmap[string(colval->strval)] != 0)pcheck = false;
                         stringmap[string(colval->strval)] = 1;
-                        isc.openScan((*ih), ST_EQ, (void*)(colval->strval));
+                        isc.openScan((*ih1), ST_EQ, (void*)(colval->strval));
                     }
+                    //printf("      scan opened\n");
                     if (isc.nextRec(temprid, tempinx)) pcheck = false;
                     isc.closeScan();
-                    ix->closeIndex(*ih);
+                    //printf("      scan closed, pcheck=%s\n", pcheck ? "true" : "false");
+                    ix->closeIndex(*ih1);
                 }
                 if(cl->isforeign){//existed foreign key check
                     refTable = db_info->TableMap[cl->ref];
                     refCol = refTable->ColMap[cl->refcol];
                     indexdir = "database/" + db_info->name + "/" + refTable->name + "/index";
-                    ih = ix->openIndex(indexdir.c_str(), refTable->IndexMap[refCol->name]);
-                    tempinx = new char[ih->attrlen];
-                    if (refCol->type == INTEGER)isc.openScan((*ih), ST_EQ, (void*)(&colval->val));
-                    if (refCol->type == FLOAT)isc.openScan((*ih), ST_EQ, (void*)(&colval->floatval));
-                    if (refCol->type == STRING)isc.openScan((*ih), ST_EQ, (void*)(colval->strval));
+                    ih1 = ix->openIndex(indexdir.c_str(), refTable->IndexMap[refCol->name]);
+                    tempinx = new char[ih1->attrlen];
+                    if (refCol->type == INTEGER)isc.openScan((*ih1), ST_EQ, (void*)(&colval->val));
+                    if (refCol->type == FLOAT)isc.openScan((*ih1), ST_EQ, (void*)(&colval->floatval));
+                    if (refCol->type == STRING)isc.openScan((*ih1), ST_EQ, (void*)(colval->strval));
                     if(isc.nextRec(temprid, tempinx)) pcheck = false;
                     isc.closeScan();
-                    ix->closeIndex(*ih);
+                    ix->closeIndex(*ih1);
                 }
             }
             else pcheck = false;
@@ -179,28 +185,27 @@ bool QLManager::Insert(AstInsert* ast)
         if (!pcheck)
             break;
     }
-    if(!pcheck)return false;
-    
+    if(!pcheck){
+        cout << "type imcompatible" << endl;
+        return false;
+    }
     string datadir = "database/" + db_info->name + "/" + tableName + "/data.txt";
     RMFile rh = rm->openFile(datadir.c_str());
     char* Data;
     
     indexdir = "database/" + db_info->name + "/" + tableName + "/index";
 
-    int nullint;
-    float nullfloat;
-    char* nullstr;
+    int nullint = -1;
+    float nullfloat = -1;
+    char* nullstr = new char[8192];
+    memset(nullstr, 0, sizeof(nullstr));
+    nullstr[0] = (char)(-1);
     for (int i = 0; i < sz; i++){
         vil = dynamic_cast<AstValList*>(vallists->valLists[i]);
         Data = new char[tb->recSize];
         for (int j = 0; j < tb->colnum; j++){
             cl = tb->ColMap[tb->cols[j]];
             if (vil->valList[j]->type == AST_KEYWORD){
-                nullstr = new char[cl->AttrLength];
-                for (int k = 0; k < cl->AttrLength; k++)nullstr[i] = 0;
-                nullstr[0] = -1;
-                nullint = -1;
-                nullfloat = -1;
                 if (cl->type == INTEGER){
                     strncpy(Data + cl->AttrOffset, (char *)(&nullint), cl->AttrLength);
                 }
@@ -226,15 +231,18 @@ bool QLManager::Insert(AstInsert* ast)
         }
         temprid = rh.insertRec(Data);
         
-        ih = ix->openIndex(indexdir.c_str(), 0);
-        ih->insertEntry((void *)(&(tb->newid)), temprid);
+        ih0 = ix->openIndex(indexdir.c_str(), 0);
+        ih0->insertEntry((void *)(&(tb->newid)), temprid);
         tb->newid++;
         rh.setNewid((unsigned int)(tb->newid));
+
+        printf("   index updated!\n");
 
         for (int j = 0; j < tb->colnum; j++){
             cl = tb->ColMap[tb->cols[j]];
             if (cl->isprimary){
-                ih = ix->openIndex(indexdir.c_str(), 1);
+                printf("   %d col update primary\n", j);
+                ih1 = ix->openIndex(indexdir.c_str(), 1);
                 if (vil->valList[j]->type == AST_KEYWORD){
                     nullstr = new char[cl->AttrLength];
                     for (int k = 0; k < cl->AttrLength; k++)nullstr[i] = 0;
@@ -242,37 +250,39 @@ bool QLManager::Insert(AstInsert* ast)
                     nullint = -1;
                     nullfloat = -1;
                     if (cl->type == INTEGER){
-                        ih->insertEntry((void*)(&nullint), temprid);
+                        ih1->insertEntry((void*)(&nullint), temprid);
                     }
                     if (cl->type == FLOAT){
-                        ih->insertEntry((void*)(&nullfloat), temprid);
+                        ih1->insertEntry((void*)(&nullfloat), temprid);
                     }
                     if (cl->type == STRING){
-                        ih->insertEntry((void*)nullstr, temprid);
+                        ih1->insertEntry((void*)nullstr, temprid);
                     }
                 }
                 else{
+                    
+                    printf("   here\n");
                     colval = dynamic_cast<AstLiteral*>(vil->valList[j]);
                     if (cl->type == INTEGER){
-                        ih->insertEntry((void*)(&colval->val), temprid);
+                        ih1->insertEntry((void*)(&colval->val), temprid);
                     }
                     if (cl->type == FLOAT){
-                        ih->insertEntry((void*)(&colval->floatval), temprid);
+                        ih1->insertEntry((void*)(&colval->floatval), temprid);
                     }
                     if (cl->type == STRING){
-                        ih->insertEntry((void*)colval->strval, temprid);
+                        ih1->insertEntry((void*)colval->strval, temprid);
                     }
+                    printf("   insert fin\n");
                 }
             }
         }
         delete[] Data;
     }
-    ih = ix->openIndex(indexdir.c_str(), 0);
-    ix->closeIndex(*ih);
-    ih = ix->openIndex(indexdir.c_str(), 1);
-    ix->closeIndex(*ih);
+    ix->closeIndex(*ih0);
+    ix->closeIndex(*ih1);
 
     rm->closeFile(rh);
+    delete[] nullstr;
     return true;
 }
 
@@ -611,7 +621,7 @@ bool QLManager::Select(AstSelect* ast)
         for (auto tableName : tableList->identList) {
             auto owner = dynamic_cast<AstIdentifier*>(tableName)->toString();
             for (auto colInfo : db_info->TableMap[owner]->ColMap)
-                printColumns.push_back(colInfo);
+                printColumns.push_back(make_pair(owner, colInfo.second));
         }
     }
     

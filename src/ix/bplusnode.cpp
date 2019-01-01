@@ -9,6 +9,7 @@ void BPlusNode::getPage() {
 void BPlusNode::clear() {
     memset(page + 10, 0, PAGE_SIZE - 10);
     owner->bpm->markDirty(pageIndex);
+    //owner->bpm->writeBack(pageIndex);
 }
 
 int BPlusNode::getAttrLen() const { 
@@ -21,6 +22,7 @@ short BPlusNode::count() const {
 void BPlusNode::setCount(short _count) {
     spage[0] = _count;
     owner->bpm->markDirty(pageIndex);
+    //owner->bpm->writeBack(pageIndex);
 }
 
 short BPlusNode::type() const { 
@@ -29,6 +31,7 @@ short BPlusNode::type() const {
 void BPlusNode::setType(short _type) {
     spage[1] = _type;
     owner->bpm->markDirty(pageIndex);
+    //owner->bpm->writeBack(pageIndex);
 }
 
 int BPlusNode::parent() const { 
@@ -37,6 +40,7 @@ int BPlusNode::parent() const {
 void BPlusNode::setParent(int _p) {
     ipage[1] = _p;
     owner->bpm->markDirty(pageIndex);
+    //owner->bpm->writeBack(pageIndex);
 }
 
 short BPlusNode::parentPtr() const { 
@@ -45,6 +49,7 @@ short BPlusNode::parentPtr() const {
 void BPlusNode::setParentPtr(short _pp) {
     spage[4] = _pp;
     owner->bpm->markDirty(pageIndex);
+    //owner->bpm->writeBack(pageIndex);
 }
 
 void* BPlusNode::block(int i) {
@@ -53,10 +58,12 @@ void* BPlusNode::block(int i) {
 void BPlusNode::setBlock(int i, void* pbData) {
     memcpy(block(i), pbData, getAttrLen() + 6);
     owner->bpm->markDirty(pageIndex);
+    //owner->bpm->writeBack(pageIndex);
 }
 void BPlusNode::clearBlock(int i) {
     memset(block(i), 0, getAttrLen() + 6);
     owner->bpm->markDirty(pageIndex);
+    //owner->bpm->writeBack(pageIndex);
 }
 
 void* BPlusNode::val(int i) const {
@@ -67,6 +74,7 @@ void BPlusNode::setVal(int i, void* pData) {
     int offs = 16 + (getAttrLen() + 6) * i;
     memcpy(page + offs, pData, getAttrLen());
     owner->bpm->markDirty(pageIndex);
+    //owner->bpm->writeBack(pageIndex);
 }
 
 int BPlusNode::child(int i) const {
@@ -77,6 +85,7 @@ void BPlusNode::setChild(int i, int ch) {
     int offs = 10 + (getAttrLen() + 6) * i;
     *((int*)(page + offs)) = ch;
     owner->bpm->markDirty(pageIndex);
+    //owner->bpm->writeBack(pageIndex);
 }
 
 int BPlusNode::lastPtr() const {
@@ -84,6 +93,7 @@ int BPlusNode::lastPtr() const {
 }
 void BPlusNode::setLastPtr(int p) {
     setChild(owner->fanOut, p);
+    //owner->bpm->writeBack(pageIndex);
 }
 
 RID BPlusNode::rec(int i) const {
@@ -99,4 +109,5 @@ void BPlusNode::setRec(int i, const RID& rid) {
     *ptrPage = rid.getPage();
     *ptrSlot = rid.getSlot();
     owner->bpm->markDirty(pageIndex);
+    //owner->bpm->writeBack(pageIndex);
 }

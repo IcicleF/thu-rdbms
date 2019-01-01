@@ -88,6 +88,7 @@ RID RMFile::insertRec(const char* data) {
         }
         *next = occ;
         setOccPtr(b, slot);
+        bpmgr->writeBack(ind);
     }
     return RID(page, slot);
 }
@@ -116,6 +117,7 @@ void RMFile::deleteRec(const RID& rid) {
         *nprev = *prev;
     }
     *prev = *next = 0;
+    bpmgr->writeBack(ind);
     return;
 }
 
@@ -137,5 +139,6 @@ void RMFile::updateRec(const RMRecord& rec) {
     for (int i = 0; i < recSize; ++i)
         b[slot + i] = recbuf[i];
     delete[] recbuf;
+    bpmgr->writeBack(ind);
     return;
 }
