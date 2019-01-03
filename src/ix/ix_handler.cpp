@@ -21,7 +21,7 @@ IXHandler::IXHandler(BPlusTree *bpt, AttrType attrtype, int attrlen)
             ai = *((int*)a);
             bi = *((int*)b);
             if(ai < bi) return -1;
-            else if(af == bf)return 0;
+            else if(ai == bi)return 0;
             else return 1;
         }
         else if(this->attrtype == FLOAT){

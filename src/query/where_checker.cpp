@@ -79,6 +79,7 @@ ExprType getColumn(const RMRecord& rec, string tableName, string colName) {
             result.type = cInfo->asttype;
             result.strval = new char[len + 5];
             strncpy(result.strval, data + offset, len);
+            result.strval[len] = 0;
             break;
     }
     delete[] data;

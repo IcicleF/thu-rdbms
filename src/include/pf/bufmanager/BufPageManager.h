@@ -12,6 +12,8 @@
  */
 struct BufPageManager {
 public:
+	std::map<int, int> replaceMarks;
+
 	int last;
 	FileManager* fileManager;
 	MyHashMap* hash;
@@ -79,10 +81,12 @@ public:
 	 */
 	BufType getPage(int fileID, int pageID, int& index) {
 		index = hash->findIndex(fileID, pageID);
-		if (index != -1) {
+		int repMark = 0;
+		if (index != -1 && (replaceMarks.find(fileID) == replaceMarks.end() || repMark != replaceMarks[fileID])) {
 			access(index);
 			return addr[index];
 		} else {
+			replaceMarks[fileID] = repMark;
 			BufType b = fetchPage(fileID, pageID, index);
 			fileManager->readPage(fileID, pageID, b, 0);
 			return b;

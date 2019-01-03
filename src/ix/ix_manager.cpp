@@ -1,5 +1,7 @@
 #include "ix/ix_manager.h"
 
+using namespace std;
+
 IXManager::IXManager(FileManager *fm, BufPageManager *bpm)
 {
     this->fm = fm;
@@ -59,6 +61,8 @@ IXHandler* IXManager::openIndex(const char *fileName, int indexNo)
 
 int IXManager::closeIndex(IXHandler &ih)
 {
+    delete ih.bpt;
+    fm->closeFile(fileIds[ih.fileName]);
     return 0;
 }
 

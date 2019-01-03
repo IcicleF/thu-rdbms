@@ -12,11 +12,6 @@ RMRecord::RMRecord(const RMRecord& b) {
     data = b.data;
 }
 
-RMRecord::RMRecord(const RID& rid, const char* data) {
-    this->rid = rid;
-    this->data = string(data);
-}
-
 RMRecord::RMRecord(const RID& rid, const std::string& data) {
     this->rid = rid;
     this->data = data;
@@ -28,7 +23,7 @@ RMRecord::~RMRecord() {
 
 void RMRecord::getData(char* dest) const {
     // assume that there are enough space in dest.
-    strcpy(dest, data.c_str());
+    memcpy(dest, data.c_str(), data.size() + 1);
 }
 
 RID RMRecord::getRID() const {

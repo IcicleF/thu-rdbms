@@ -28,17 +28,18 @@ RMRecord RMFile::getRec(const RID& rid) const {
         return RMRecord();
     }
     CharBufType b = (CharBufType)bpmgr->getPage(fileId, rid.getPage(), ind);
+    BufType bb = (BufType)b;
     int slot = rid.getSlot();
     if (slot < 0 || slot + extRecSize > PAGE_SIZE) {
         raise(E_RM_INVSLOT);
         return RMRecord();
     }
-    char* recbuf = new char[recSize + 5];
+    string recbuf;
+    recbuf.resize(recSize + 1);
     for (int i = 0; i < recSize; ++i)
         recbuf[i] = b[slot + i];
     recbuf[recSize] = 0;
     RMRecord rec(rid, recbuf);
-    delete[] recbuf;
     return rec;
 }
 
@@ -50,11 +51,17 @@ RID RMFile::insertRec(const char* data) {
     CharBufType b;
     int page = 0;
     while (true) {
-        b = (CharBufType)bpmgr->getPage(fileId, page, ind);
-        if (b[USED_SIZE_LOC] == 0)
+        //cout << "page is " << page << endl;
+        if (page > totPages) {
+            setTotPages(totPages + 1);
+            b = (CharBufType)bpmgr->allocPage(fileId, page, ind);
             formatPage(b);
+        }
+        else
+            b = (CharBufType)bpmgr->getPage(fileId, page, ind);
         if (getEmptyPtr(b) != 0)
             break;
+        bpmgr->release(ind);
         ++page;
     }
     ushort slot = getEmptyPtr(b);
@@ -67,9 +74,10 @@ RID RMFile::insertRec(const char* data) {
         bpmgr->markDirty(ind);
         for (int i = 0; i < recSize; ++i)
             b[slot + i] = data[i];
+
         ushort* prev = PREV(b + slot);
         ushort* next = NEXT(b + slot);
-        assert(*prev == 0);
+        *prev = 0;
         if (slot == used) {         // un-formatted empty slot
             used += extRecSize;
             *next = (used + extRecSize > PAGE_SIZE) ? 0 : used;

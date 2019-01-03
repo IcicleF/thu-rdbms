@@ -44,7 +44,7 @@ class QLManager{
         RMManager *rm;
         IXManager *ix;
         void DeleteCol(std::string, IndexRM);
-        void UpdateCol(std::string, RMRecord, const std::map<string, ExprType*>&);
+        void UpdateCol(std::string, RMRecord, const std::map<std::string, ExprType*>&);
         bool checktype(AstLiteral*, ColInfo*);
 };
 

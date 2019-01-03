@@ -1,6 +1,8 @@
 #include "rm/rm_manager.h"
 #include "errs.h"
 
+#include <cstring>
+
 RMManager::RMManager()
 {
     fm = new FileManager();
@@ -32,8 +34,9 @@ void RMManager::createFile(const char *fileName, int recordSize)
         fm -> createFile(fileName);
         fm -> openFile(fileName, fileId);
         b = bpm -> allocPage(fileId, 0, index, false);
+        memset(b, 0, PAGE_SIZE);
         b[0] = recordSize;
-        b[3] = 1;
+        b[3] = 0;
         bpm -> markDirty(index);
         bpm -> writeBack(index);
         fm -> closeFile(fileId);

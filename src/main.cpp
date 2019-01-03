@@ -99,6 +99,7 @@ int main() {
     while (true) {
         cout << "> ";
         yyparse();
+        global->bpm->close();
         cout << endl;
     }
     delete global;

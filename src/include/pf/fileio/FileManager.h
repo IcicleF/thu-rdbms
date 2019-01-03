@@ -2,23 +2,26 @@
 #define FILE_MANAGER
 #include <string>
 #include <stdio.h>
-#include <iostream>
+#include <cstring>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+
+#include <map>
+
 //#include "../MyLinkList.h"
-using namespace std;
 class FileManager {
 private:
 	//FileTable* ftable;
+	std::map<int, int> replaceMarks;
 	int fd[MAX_FILE_NUM];
 	MyBitMap* fm;
 	MyBitMap* tm;
 	int _createFile(const char* name) {
 		FILE* f = fopen(name, "a+");
 		if (f == NULL) {
-			cout << "fail" << endl;
+			//cout << "fail" << endl;
 			return -1;
 		}
 		fclose(f);
@@ -114,6 +117,10 @@ public:
 	 */
 	bool openFile(const char* name, int& fileID) {
 		fileID = fm->findLeftOne();
+		if (replaceMarks.find(fileID) == replaceMarks.end())
+			replaceMarks[fileID] = 1;
+		else
+			replaceMarks[fileID] = 1 + replaceMarks[fileID];
 		fm->setBit(fileID, 0);
 		_openFile(name, fileID);
 		return true;

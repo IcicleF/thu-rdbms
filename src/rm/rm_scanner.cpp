@@ -3,6 +3,8 @@
 #include<cstdlib>
 #include<cstdio>
 
+using namespace std;
+
 int PageId;
 
 RMScanner::RMScanner()

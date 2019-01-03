@@ -15,7 +15,13 @@ class MyBitMap {
 				bits.erase(pos);
 		}
 		int findLeftOne() {
-			return counter++;
+			int prev = 0;
+			for (auto z : bits) {
+				if (prev + 1 != z)
+					return prev + 1;
+				prev = z;
+			}
+			return prev + 1;
 		}
 
 	private:

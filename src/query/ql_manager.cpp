@@ -53,7 +53,9 @@ bool QLManager::checktype(AstLiteral* ast, ColInfo* cl)
     if(ast->literalType == L_INT)temptype = INTEGER;
     if(ast->literalType == L_DECIMAL)temptype = FLOAT;
     if(ast->literalType == L_STRING)temptype = STRING;
-    if(temptype != cl->type)return false;
+    if(temptype != cl->type)
+        if (!(temptype == INTEGER && cl->type == FLOAT))
+            return false;
     
     string strval;
     int limval;
@@ -117,10 +119,10 @@ bool QLManager::Insert(AstInsert* ast)
     RID temprid;
     char* tempinx;
 
-    printf("sz = %d\n", sz);
+    //printf("sz = %d\n", sz);
 
     for(int i = 0; i < sz; i++){
-        printf("   i = %d\n", i);
+        //printf("   i = %d\n", i);
         vil = dynamic_cast<AstValList*>(vallists->valLists[i]);
         int vsz = vil->valList.size();
         if(vsz != tb->colnum){
@@ -142,30 +144,33 @@ bool QLManager::Insert(AstInsert* ast)
                 if(cl->isprimary){//repeat primary key check
                     indexdir = "database/" + db_info->name + "/" + tableName + "/index";
                     ih1 = ix->openIndex(indexdir.c_str(), tb->IndexMap[cl->name]);
-                    ih1->bpt->printTree();
                     tempinx = new char[ih1->attrlen];
-                    printf("      index opened\n");
+                    //printf("      index opened\n");
                     if(cl->type == INTEGER){
                         if(intmap[colval->val] != 0)pcheck = false;
                         intmap[colval->val] = 1;
                         isc.openScan((*ih1), ST_EQ, (void*)(&colval->val));
                     }
                     if(cl->type == FLOAT){
-                        if(floatmap[colval->floatval] != 0)pcheck = false;
-                        floatmap[colval->floatval] = 1;
-                        isc.openScan((*ih1), ST_EQ, (void*)(&colval->floatval));
+                        float v = colval->floatval;
+                        if (colval->literalType == L_INT)
+                            v = (float)colval->val;
+                        if(floatmap[v] != 0)pcheck = false;
+                        floatmap[v] = 1;
+                        isc.openScan((*ih1), ST_EQ, (void*)(&v));
                     }
                     if(cl->type == STRING){
                         if(stringmap[string(colval->strval)] != 0)pcheck = false;
                         stringmap[string(colval->strval)] = 1;
                         isc.openScan((*ih1), ST_EQ, (void*)(colval->strval));
                     }
-                    printf("      scan opened\n");
+                    //printf("      scan opened\n");
                     if (isc.nextRec(temprid, tempinx)) pcheck = false;
+                    delete[] tempinx;
                     isc.closeScan();
-                    printf("      scan closed, pcheck=%s\n", pcheck ? "true" : "false");
+                    //printf("      scan closed, pcheck=%s\n", pcheck ? "true" : "false");
                     ix->closeIndex(*ih1);
-                    printf("      index closed\n");
+                    //printf("      index closed\n");
                 }
                 if(cl->isforeign){//existed foreign key check
                     refTable = db_info->TableMap[cl->ref];
@@ -174,7 +179,12 @@ bool QLManager::Insert(AstInsert* ast)
                     ih1 = ix->openIndex(indexdir.c_str(), refTable->IndexMap[refCol->name]);
                     tempinx = new char[ih1->attrlen];
                     if (refCol->type == INTEGER)isc.openScan((*ih1), ST_EQ, (void*)(&colval->val));
-                    if (refCol->type == FLOAT)isc.openScan((*ih1), ST_EQ, (void*)(&colval->floatval));
+                    if (refCol->type == FLOAT) {
+                        float v = colval->floatval;
+                        if (colval->literalType == L_INT)
+                            v = (float)colval->val;
+                        isc.openScan((*ih1), ST_EQ, (void*)(&v));
+                    }
                     if (refCol->type == STRING)isc.openScan((*ih1), ST_EQ, (void*)(colval->strval));
                     if(isc.nextRec(temprid, tempinx)) pcheck = false;
                     isc.closeScan();
@@ -188,7 +198,7 @@ bool QLManager::Insert(AstInsert* ast)
             break;
     }
     if(!pcheck){
-        cout << "type imcompatible" << endl;
+        cout << "illegal input record" << endl;
         return false;
     }
     printf("check fin!\n");
@@ -202,48 +212,62 @@ bool QLManager::Insert(AstInsert* ast)
     char* nullstr = new char[8192];
     memset(nullstr, 0, sizeof(nullstr));
     nullstr[0] = (char)(-1);
+
+    ih0 = ix->openIndex(indexdir.c_str(), 0);
+    ih1 = ix->openIndex(indexdir.c_str(), 1);
     for (int i = 0; i < sz; i++){
+        printf("i = %d\n", i);
         vil = dynamic_cast<AstValList*>(vallists->valLists[i]);
         Data = new char[tb->recSize];
+        memset(Data, 0, tb->recSize);
         for (int j = 0; j < tb->colnum; j++){
             cl = tb->ColMap[tb->cols[j]];
             //printf("   offset %d\n", cl->AttrOffset);
             if (vil->valList[j]->type == AST_KEYWORD){
                 if (cl->type == INTEGER){
-                    strncpy(Data + cl->AttrOffset, (char *)(&nullint), cl->AttrLength);
+                    memcpy(Data + cl->AttrOffset, (void *)(&nullint), cl->AttrLength);
                 }
                 if (cl->type == FLOAT){
-                    strncpy(Data + cl->AttrOffset, (char *)(&nullfloat), cl->AttrLength);
+                    memcpy(Data + cl->AttrOffset, (void *)(&nullfloat), cl->AttrLength);
                 }
                 if (cl->type == STRING){
-                    strncpy(Data + cl->AttrOffset, nullstr, cl->AttrLength);
+                    memcpy(Data + cl->AttrOffset, nullstr, cl->AttrLength);
                 }
             }
             else {
                 colval = dynamic_cast<AstLiteral*>(vil->valList[j]);
                 if (cl->type == INTEGER){
-                    strncpy(Data + cl->AttrOffset, (char *)(&colval->val), cl->AttrLength);
+                    memcpy(Data + cl->AttrOffset, (void *)(&colval->val), cl->AttrLength);
                 }
                 if (cl->type == FLOAT){
-                    strncpy(Data + cl->AttrOffset, (char *)(&colval->floatval), cl->AttrLength);
+                    float v = colval->floatval;
+                    if (colval->literalType == L_INT)
+                        v = (float)colval->val;
+                    memcpy(Data + cl->AttrOffset, (void *)(&v), cl->AttrLength);
                 }
                 if (cl->type == STRING){
-                    strncpy(Data + cl->AttrOffset, colval->strval, cl->AttrLength);
+                    memcpy(Data + cl->AttrOffset, colval->strval, cl->AttrLength);
                 }
             }
         }
-        printf("data is (%d)<", tb->recSize);
-        for (int i = 0; i < tb->recSize; ++i)
-            printf("%02x ", Data[i]);
-        printf(">\n");
+        //printf("data is (%d)<", tb->recSize);
+        //for (int i = 0; i < tb->recSize; ++i)
+        //    printf("%02x ", Data[i]);
+        //printf(">\n");
 
         RMFile rh = rm->openFile(datadir.c_str());
         temprid = rh.insertRec(Data);
         rm->closeFile(rh);
-        printf("rid = pg %d, sl %d\n", temprid.getPage(), temprid.getSlot());
+        fflush(stdout);
         
-        ih0 = ix->openIndex(indexdir.c_str(), 0);
         ih0->insertEntry((void *)(&(tb->newid)), temprid);
+
+        if (i == 818) {
+            //..
+        }
+
+        fflush(stdout);
+
         tb->updateNewid();
 
         printf("   index updated!\n");
@@ -252,7 +276,6 @@ bool QLManager::Insert(AstInsert* ast)
             cl = tb->ColMap[tb->cols[j]];
             if (cl->isprimary){
                 printf("   %d col update primary\n", j);
-                ih1 = ix->openIndex(indexdir.c_str(), 1);
                 try {
                     colval = dynamic_cast<AstLiteral*>(vil->valList[j]);
                 }
@@ -264,7 +287,10 @@ bool QLManager::Insert(AstInsert* ast)
                     ih1->insertEntry((void*)(&colval->val), temprid);
                 }
                 if (cl->type == FLOAT){
-                    ih1->insertEntry((void*)(&colval->floatval), temprid);
+                    float v = colval->floatval;
+                    if (colval->literalType == L_INT)
+                        v = (float)colval->val;
+                    ih1->insertEntry((void*)(&v), temprid);
                 }
                 if (cl->type == STRING){
                     ih1->insertEntry((void*)colval->strval, temprid);
@@ -273,6 +299,9 @@ bool QLManager::Insert(AstInsert* ast)
             }
         }
         delete[] Data;
+
+        //if (i % 100 == 99)
+        //    printf("  Inserted %d items, please wait...\n", i + 1);
     }
     ix->closeIndex(*ih0);
     ix->closeIndex(*ih1);
@@ -614,27 +643,28 @@ bool QLManager::Select(AstSelect* ast)
     else {
         for (auto tableName : tableList->identList) {
             auto owner = dynamic_cast<AstIdentifier*>(tableName)->toString();
-            for (auto colInfo : db_info->TableMap[owner]->ColMap)
-                printColumns.push_back(make_pair(owner, colInfo.second));
+            for (auto colInfo : db_info->TableMap[owner]->cols)
+                printColumns.push_back(make_pair(owner, db_info->TableMap[owner]->ColMap[colInfo]));
         }
     }
     
     vector<int> printOffset;
-    printOffset.resize(printColumns.size());
+    int nCols = printColumns.size();
+    printOffset.resize(nCols + 1);
     printOffset[0] = 0;
     // Calculate printing-width for each column
-    for (int i = 0; i < printColumns.size() - 1; ++i) {
+    for (int i = 0; i < nCols; ++i) {
         int titleLen = printColumns[i].first.length() + printColumns[i].second->name.length() + 1;
         int attrWidth = printColumns[i].second->type == FLOAT ? 11 : printColumns[i].second->collimit;
         int width = max(titleLen, attrWidth);
         width = max(width, 4);
         printOffset[i + 1] = printOffset[i] + width + 2;
         cout << printColumns[i].first << "." << printColumns[i].second->name;
-        for (int j = printOffset[i] + printColumns[i].first.length(); j < printOffset[i + 1]; ++j)
+        for (int j = printOffset[i] + titleLen; j < printOffset[i + 1]; ++j)
             cout << " ";
     }
     cout << endl;       // Title printed
-    for (int i = 0, fi = printOffset[printColumns.size() - 1]; i < fi; ++i)
+    for (int i = 0, fi = printOffset[nCols]; i < fi; ++i)
         cout << "-";
     cout << endl;       // Split line printed
 

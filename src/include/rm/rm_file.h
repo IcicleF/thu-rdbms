@@ -12,13 +12,14 @@
 #define USED_SIZE_LOC 4
 
 #define extRecSize (recSize + sizeof(ushort) * 2)
-#define PREV(x) ((ushort*)(x + recSize))
+#define PREV(x) ((ushort*)((x) + recSize))
 #define NEXT(x) (PREV(x) + 1)
 
 class RMFile {
     public:
         int fileId;
         int recSize;
+        uint totPages;
         BufPageManager* bpmgr;
 
     public:
@@ -59,13 +60,21 @@ class RMFile {
             int ind;
             BufType b = bpmgr->getPage(fileId, 0, ind);
             recSize = int(b[0]);
-            std::cout << "recSize is " << recSize << std::endl;
+            totPages = int(b[3]);
+            bpmgr->release(ind);
+        }
+        void setTotPages(uint x) {
+            int ind;
+            BufType b = bpmgr->getPage(fileId, 0, ind);
+            b[3] = totPages = x;
+            bpmgr->markDirty(ind);
+            bpmgr->writeBack(ind);
         }
         static void formatPage(CharBufType cb) {
-            ShortBufType b = (ShortBufType)cb;
-            b[EMPTY_PTR_LOC] = PAGE_HEADER;
-            b[OCC_PTR_LOC] = 0;
-            b[USED_SIZE_LOC] = PAGE_HEADER;
+            memset(cb + 4, 0, PAGE_SIZE - 4);
+            setEmptyPtr(cb, PAGE_HEADER);
+            setOccPtr(cb, 0);
+            setUsedSize(cb, PAGE_HEADER);
         }
 };
 

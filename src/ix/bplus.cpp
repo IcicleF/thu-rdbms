@@ -19,14 +19,17 @@ BPlusTree::BPlusTree(BufPageManager* bpm, int fileId) {
     this->_root = p0[3];
     //cout << attrLen << " " << _nodeNum << " " << _root << endl;
     fanOut = (PAGE_SIZE - 16) / (attrLen + 6) + 1;
-    //fanOut = 4;             // 测试用！！！
+    //fanOut = 100;             // 测试用！！！
     if (fanOut & 1)
         fanOut -= 1;        // force even
     cur.owner = this;
 }
 
 BPlusTree::~BPlusTree() {
-    // Nothing special.
+    for (auto id : usedPages) {
+        //cout << "writeBack " << id << endl;
+        bpm->writeBack(id);
+    }
 }
 
 void BPlusTree::traceToLeaf(void *pData) {
@@ -69,7 +72,7 @@ bool BPlusTree::searchEntry(void* pData, RID& rid) {
 
 // insert at leaf
 void BPlusTree::insertEntry(void* pData, const RID& rid) {
-    printf("insert entry at pg %d sl %d\n", rid.getPage(), rid.getSlot());
+    //printf("insert entry at pg %d sl %d\n", rid.getPage(), rid.getSlot());
     traceToLeaf(pData);
     int l = cur.count();
     int par = cur.parent();
