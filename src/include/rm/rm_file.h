@@ -61,7 +61,7 @@ class RMFile {
             BufType b = bpmgr->getPage(fileId, 0, ind);
             recSize = int(b[0]);
             totPages = int(b[3]);
-            bpmgr->release(ind);
+            bpmgr->writeBack(ind);
         }
         void setTotPages(uint x) {
             int ind;

@@ -10,7 +10,8 @@
 
 #include <map>
 
-//#include "../MyLinkList.h"
+#include "pf/utils/MyBitMap.h"
+
 class FileManager {
 private:
 	//FileTable* ftable;
@@ -120,7 +121,7 @@ public:
 		if (replaceMarks.find(fileID) == replaceMarks.end())
 			replaceMarks[fileID] = 1;
 		else
-			replaceMarks[fileID] = 1 + replaceMarks[fileID];
+			replaceMarks[fileID] += 1;
 		fm->setBit(fileID, 0);
 		_openFile(name, fileID);
 		return true;
@@ -132,6 +133,11 @@ public:
 	}
 	void closeType(int typeID) {
 		tm->setBit(typeID, 1);
+	}
+	int getReplaceMark(int fileID) {
+		if (replaceMarks.find(fileID) == replaceMarks.end())
+			return -1;
+		return replaceMarks[fileID];
 	}
 	void shutdown() {
 		delete tm;

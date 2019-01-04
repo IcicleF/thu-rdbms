@@ -39,16 +39,14 @@ class BPlusTree {
         int nodeNum() { return _nodeNum; }
         int root() { return _root; }
         void setNodeNum(int nn) {
-            bpm->getPage(fileId, 0, p0Index);
             p0[2] = _nodeNum = nn;
             bpm->markDirty(p0Index);
-            bpm->writeBack(p0Index);
+            usedPages.insert(p0Index);
         }
         void setRoot(int r) {
-            bpm->getPage(fileId, 0, p0Index);
             p0[3] = _root = r;
             bpm->markDirty(p0Index);
-            bpm->writeBack(p0Index);
+            usedPages.insert(p0Index);
         }
         
         BPlusNode cur;

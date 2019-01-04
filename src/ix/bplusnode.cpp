@@ -1,15 +1,24 @@
 #include "ix/bplus.h"
 #include "ix/bplusnode.h"
+#include <iostream>
 
 using namespace std;
 
-void BPlusNode::getPage() {
-    page = (CharBufType)owner->bpm->getPage(owner->fileId, pageId, pageIndex);
+void BPlusNode::getPage(bool isNewPage) {
+    if (isNewPage)
+        page = (CharBufType)owner->bpm->allocPage(owner->fileId, pageId, pageIndex);
+    else
+        page = (CharBufType)owner->bpm->getPage(owner->fileId, pageId, pageIndex);
     owner->usedPages.insert(pageIndex);
+}
+void BPlusNode::release() {
+    owner->bpm->writeBack(pageIndex);
+    owner->usedPages.erase(pageIndex);
 }
 void BPlusNode::clear() {
     memset(page + 10, 0, PAGE_SIZE - 10);
     owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
 }
 
 int BPlusNode::getAttrLen() const { 
@@ -22,6 +31,7 @@ short BPlusNode::count() const {
 void BPlusNode::setCount(short _count) {
     spage[0] = _count;
     owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
 }
 
 short BPlusNode::type() const { 
@@ -30,6 +40,7 @@ short BPlusNode::type() const {
 void BPlusNode::setType(short _type) {
     spage[1] = _type;
     owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
 }
 
 int BPlusNode::parent() const { 
@@ -38,6 +49,7 @@ int BPlusNode::parent() const {
 void BPlusNode::setParent(int _p) {
     ipage[1] = _p;
     owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
 }
 
 short BPlusNode::parentPtr() const { 
@@ -46,6 +58,7 @@ short BPlusNode::parentPtr() const {
 void BPlusNode::setParentPtr(short _pp) {
     spage[4] = _pp;
     owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
 }
 
 void* BPlusNode::block(int i) {
@@ -54,10 +67,12 @@ void* BPlusNode::block(int i) {
 void BPlusNode::setBlock(int i, void* pbData) {
     memcpy(block(i), pbData, getAttrLen() + 6);
     owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
 }
 void BPlusNode::clearBlock(int i) {
     memset(block(i), 0, getAttrLen() + 6);
     owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
 }
 
 void* BPlusNode::val(int i) const {
@@ -68,6 +83,7 @@ void BPlusNode::setVal(int i, void* pData) {
     int offs = 16 + (getAttrLen() + 6) * i;
     memcpy(page + offs, pData, getAttrLen());
     owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
 }
 
 int BPlusNode::child(int i) const {
@@ -78,6 +94,7 @@ void BPlusNode::setChild(int i, int ch) {
     int offs = 10 + (getAttrLen() + 6) * i;
     *((int*)(page + offs)) = ch;
     owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
 }
 
 int BPlusNode::lastPtr() const {
@@ -100,4 +117,5 @@ void BPlusNode::setRec(int i, const RID& rid) {
     *ptrPage = rid.getPage();
     *ptrSlot = rid.getSlot();
     owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
 }

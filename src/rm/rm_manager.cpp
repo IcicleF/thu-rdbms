@@ -2,6 +2,9 @@
 #include "errs.h"
 
 #include <cstring>
+#include <iostream>
+
+using namespace std;
 
 RMManager::RMManager()
 {
@@ -36,6 +39,7 @@ void RMManager::createFile(const char *fileName, int recordSize)
         b = bpm -> allocPage(fileId, 0, index, false);
         memset(b, 0, PAGE_SIZE);
         b[0] = recordSize;
+        b[1] = b[2] = 0x00000010;
         b[3] = 0;
         bpm -> markDirty(index);
         bpm -> writeBack(index);

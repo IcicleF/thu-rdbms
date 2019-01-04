@@ -20,7 +20,8 @@ struct BPlusNode {
     BPlusNode(int pageId = -1) : pageId(pageId) { }
 
     // load page from current pageId
-    void getPage();
+    void getPage(bool isNewPage = false);
+    void release();
     void clear();
 
     // access attrLen from owner

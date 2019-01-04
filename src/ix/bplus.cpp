@@ -19,17 +19,15 @@ BPlusTree::BPlusTree(BufPageManager* bpm, int fileId) {
     this->_root = p0[3];
     //cout << attrLen << " " << _nodeNum << " " << _root << endl;
     fanOut = (PAGE_SIZE - 16) / (attrLen + 6) + 1;
-    //fanOut = 100;             // 测试用！！！
+    fanOut = 64;          
     if (fanOut & 1)
         fanOut -= 1;        // force even
     cur.owner = this;
 }
 
 BPlusTree::~BPlusTree() {
-    for (auto id : usedPages) {
-        //cout << "writeBack " << id << endl;
+    for (auto id : usedPages)
         bpm->writeBack(id);
-    }
 }
 
 void BPlusTree::traceToLeaf(void *pData) {
@@ -43,12 +41,14 @@ void BPlusTree::traceToLeaf(void *pData) {
         }
         else {
             short l = cur.count();
-            for (int i = l - 1; i >= 0; --i)
+            for (int i = l - 1; i >= 0; --i) {
                 if (cmp(pData, cur.val(i)) >= 0) {
                     cur.pageId = cur.child(i + 1);
                     break;
                 }
+            }
         }
+        // cout << "found cur.pageId " << cur.pageId << endl;
         cur.getPage();
     }
 }
@@ -72,7 +72,6 @@ bool BPlusTree::searchEntry(void* pData, RID& rid) {
 
 // insert at leaf
 void BPlusTree::insertEntry(void* pData, const RID& rid) {
-    //printf("insert entry at pg %d sl %d\n", rid.getPage(), rid.getSlot());
     traceToLeaf(pData);
     int l = cur.count();
     int par = cur.parent();
@@ -113,7 +112,6 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
         memcpy(nextkey, nv.val(0), attrLen);
 
         // left node: cur
-        cur.getPage();
         cur.clear();
         cur.setCount(fanOut / 2);
         for (int i = 0; i < fanOut / 2; ++i)
@@ -126,11 +124,9 @@ void BPlusTree::insertEntry(void* pData, const RID& rid) {
         if (par == 0) {
             makeRoot(nextkey, cur.pageId, nv.pageId);
             cur.setParent(root());
-            nv.getPage();
             nv.setParent(root());
         }
         else {
-            nv.getPage();
             nv.setParent(par);
             cur.pageId = par;
             cur.getPage();
@@ -183,8 +179,8 @@ void BPlusTree::insertInner(void* pData, int pageId) {
             }
         }
 
-        cout << "  "; for(int i = 0; i <= fanOut; ++i) cout << ptrs[i] << " ";
-        cout << endl;
+        //cout << "  "; for(int i = 0; i <= fanOut; ++i) cout << ptrs[i] << " ";
+        //cout << endl;
 
         int n = nodeNum();
         setNodeNum(++n);
@@ -198,7 +194,6 @@ void BPlusTree::insertInner(void* pData, int pageId) {
             nch.setParent(n);
         }
 
-        cur.getPage();
         cur.clear();
         cur.setCount(fanOut / 2);
         for (int i = 0; i < fanOut / 2; ++i) {
@@ -232,7 +227,6 @@ void BPlusTree::insertInner(void* pData, int pageId) {
         if (par == 0) {
             makeRoot(nextkey, cur.pageId, nv.pageId);
             nv.setParent(root());
-            cur.getPage();
             cur.setParent(root());
         }
         else {
@@ -251,8 +245,8 @@ void BPlusTree::insertInner(void* pData, int pageId) {
                     pos = j + 1;
                     break;
                 }
-        //cout << "  insertEntry: found pos = " << pos << endl;
-        cur.setChild(l + 1, cur.child(l));
+        if (l > pos)
+            cur.setChild(l + 1, cur.child(l));
         for (int j = l; j > pos; --j)
             cur.setBlock(j, cur.block(j - 1));
         cur.setVal(pos, pData);

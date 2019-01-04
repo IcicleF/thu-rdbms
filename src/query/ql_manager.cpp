@@ -213,10 +213,8 @@ bool QLManager::Insert(AstInsert* ast)
     memset(nullstr, 0, sizeof(nullstr));
     nullstr[0] = (char)(-1);
 
-    ih0 = ix->openIndex(indexdir.c_str(), 0);
-    ih1 = ix->openIndex(indexdir.c_str(), 1);
     for (int i = 0; i < sz; i++){
-        printf("i = %d\n", i);
+        //cout << "i = " << i << endl;
         vil = dynamic_cast<AstValList*>(vallists->valLists[i]);
         Data = new char[tb->recSize];
         memset(Data, 0, tb->recSize);
@@ -246,36 +244,34 @@ bool QLManager::Insert(AstInsert* ast)
                     memcpy(Data + cl->AttrOffset, (void *)(&v), cl->AttrLength);
                 }
                 if (cl->type == STRING){
-                    memcpy(Data + cl->AttrOffset, colval->strval, cl->AttrLength);
+                    strcpy(Data + cl->AttrOffset, colval->strval);
                 }
             }
         }
+
         //printf("data is (%d)<", tb->recSize);
         //for (int i = 0; i < tb->recSize; ++i)
-        //    printf("%02x ", Data[i]);
+        //    printf("%02x ", (unsigned char)Data[i]);
         //printf(">\n");
 
         RMFile rh = rm->openFile(datadir.c_str());
         temprid = rh.insertRec(Data);
         rm->closeFile(rh);
-        fflush(stdout);
+
+        //cout << "insert at pg " << temprid.getPage() << " sl " << temprid.getSlot() << endl;
+
+        ih0 = ix->openIndex(indexdir.c_str(), 0);
+        ih1 = ix->openIndex(indexdir.c_str(), 1);
         
         ih0->insertEntry((void *)(&(tb->newid)), temprid);
-
-        if (i == 818) {
-            //..
-        }
-
-        fflush(stdout);
-
         tb->updateNewid();
 
-        printf("   index updated!\n");
+        //printf("   index0 updated!\n");
 
         for (int j = 0; j < tb->colnum; j++){
             cl = tb->ColMap[tb->cols[j]];
             if (cl->isprimary){
-                printf("   %d col update primary\n", j);
+                //printf("   %d col update primary\n", j);
                 try {
                     colval = dynamic_cast<AstLiteral*>(vil->valList[j]);
                 }
@@ -295,16 +291,24 @@ bool QLManager::Insert(AstInsert* ast)
                 if (cl->type == STRING){
                     ih1->insertEntry((void*)colval->strval, temprid);
                 }
-                printf("   insert fin\n");
+                //printf("   index1 updated!\n");
             }
         }
         delete[] Data;
 
-        //if (i % 100 == 99)
-        //    printf("  Inserted %d items, please wait...\n", i + 1);
+        if (i % 1000 == 999) {
+            printf("Processed %d records", i + 1);
+            if (i + 1 != sz)
+                printf(", please be patient...\n");
+            else
+                printf(".\n");
+            //ih0->bpt->printTree();
+        }
+        
+        ix->closeIndex(*ih0);
+        ix->closeIndex(*ih1);
     }
-    ix->closeIndex(*ih0);
-    ix->closeIndex(*ih1);
+
     delete[] nullstr;
     return true;
 }

@@ -6,6 +6,8 @@ set(CMAKE_CXX_COMPILER "g++")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_definitions(-O2)
+
 project(thu-rdbms)
 
 set(EXECUTABLE_OUTPUT_PATH ./build)

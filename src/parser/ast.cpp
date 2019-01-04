@@ -140,7 +140,7 @@ any AstInsert::eval() {
     bool res = global->ql->evalAst(this);
     string tablename = dynamic_cast<AstIdentifier*>(this->table)->toString();
     if (res)
-        cout << "Insert value into table " << tablename << endl;
+        cout << "Inserted value into table " << tablename << endl;
     else
         throw EvalException("cannot insert value into table " + tablename + " in current context");
     return res;
@@ -150,7 +150,7 @@ any AstDelete::eval() {
     bool res = global->ql->evalAst(this);
     string tablename = dynamic_cast<AstIdentifier*>(this->table)->toString();
     if (res)
-        cout << "Delete value from table " << tablename << endl;
+        cout << "Deleted value from table " << tablename << endl;
     else
         throw EvalException("cannot delete value from table " + tablename + " in current context");
     return res;
@@ -160,7 +160,7 @@ any AstUpdate::eval() {
     bool res = global->ql->evalAst(this);
     string tablename = dynamic_cast<AstIdentifier*>(this->table)->toString();
     if (res)
-        cout << "Update value in table " << tablename << endl;
+        cout << "Updated value in table " << tablename << endl;
     else
         throw EvalException("cannot update value in table " + tablename + " in current context");
     return res;

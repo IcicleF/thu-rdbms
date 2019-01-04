@@ -6,8 +6,6 @@
 #include <iostream>
 using namespace std;
 
-int ind;
-
 RMFile::RMFile() {
     // Nothing special.
 }
@@ -16,6 +14,7 @@ RMFile::RMFile(BufPageManager* bpmgr, int fileId) {
     this->bpmgr = bpmgr;
     this->fileId = fileId;
     getRecordSize();
+    //cout << "recordSize is " << recSize << endl;
 }
 
 RMFile::~RMFile() {
@@ -23,6 +22,7 @@ RMFile::~RMFile() {
 }
 
 RMRecord RMFile::getRec(const RID& rid) const {
+    int ind;
     if (bpmgr == NULL) {
         raise(E_RM_NOBUFMGR);
         return RMRecord();
@@ -44,6 +44,7 @@ RMRecord RMFile::getRec(const RID& rid) const {
 }
 
 RID RMFile::insertRec(const char* data) {
+    int ind;
     if (bpmgr == NULL) {
         raise(E_RM_NOBUFMGR);
         return RID();
@@ -51,10 +52,9 @@ RID RMFile::insertRec(const char* data) {
     CharBufType b;
     int page = 0;
     while (true) {
-        //cout << "page is " << page << endl;
         if (page > totPages) {
             setTotPages(totPages + 1);
-            b = (CharBufType)bpmgr->allocPage(fileId, page, ind);
+            b = (CharBufType)bpmgr->getPage(fileId, page, ind);
             formatPage(b);
         }
         else
@@ -102,6 +102,7 @@ RID RMFile::insertRec(const char* data) {
 }
 
 void RMFile::deleteRec(const RID& rid) {
+    int ind;
     if (bpmgr == NULL) {
         raise(E_RM_NOBUFMGR);
         return;
@@ -130,6 +131,7 @@ void RMFile::deleteRec(const RID& rid) {
 }
 
 void RMFile::updateRec(const RMRecord& rec) {
+    int ind;
     if (bpmgr == NULL) {
         raise(E_RM_NOBUFMGR);
         return;

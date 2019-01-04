@@ -39,21 +39,17 @@ IXHandler::IXHandler(BPlusTree *bpt, AttrType attrtype, int attrlen)
 
 IXHandler::~IXHandler()
 {
+    for (int p : bpt->usedPages)
+        bpt->bpm->writeBack(p);
     delete this->bpt;
 }
 
 int IXHandler::insertEntry(void* pData, const RID& rid) {
-    bpt->usedPages.clear();
     bpt->insertEntry(pData, rid);
-    for (int p : bpt->usedPages)
-        bpt->bpm->writeBack(p);
     return 0;
 }
 
 int IXHandler::deleteEntry(void* pData, const RID& rid) {
-    bpt->usedPages.clear();
     int res = bpt->deleteEntry(pData, rid);
-    for (int p : bpt->usedPages)
-        bpt->bpm->writeBack(p);
     return res;
 }
