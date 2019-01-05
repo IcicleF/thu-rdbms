@@ -186,7 +186,7 @@ bool QLManager::Insert(AstInsert* ast)
                         isc.openScan((*ih1), ST_EQ, (void*)(&v));
                     }
                     if (refCol->type == STRING)isc.openScan((*ih1), ST_EQ, (void*)(colval->strval));
-                    if(isc.nextRec(temprid, tempinx)) pcheck = false;
+                    if(isc.nextRec(temprid, tempinx) == false) pcheck = false;
                     isc.closeScan();
                     ix->closeIndex(*ih1);
                 }
@@ -313,6 +313,11 @@ bool QLManager::Insert(AstInsert* ast)
     return true;
 }
 
+bool QLManager::checkforeignkey(string tableName, string colName)
+{
+
+}
+
 void QLManager::DeleteCol(string tableName, IndexRM* rx)
 {
     TableInfo* tb = db_info->TableMap[tableName];
@@ -415,24 +420,33 @@ void QLManager::UpdateCol(string tableName, RMRecord rec, const map<string, Expr
     upd_data = new char[tb->recSize];
     RID updrid;
     rec.getData(upd_data);
+   /* cout << "data before update " << endl;
+    for (int i = 0; i < tb->recSize; i++){
+        printf("%02x ", upd_data[i]);
+    }
+    cout << endl;*/
     updrid = rec.getRID();
 
     IXHandler *ih;
     for (itv = recmap.begin(); itv != recmap.end(); itv++){
         ts = itv->second;
         colName = itv->first;
+        //cout << "upd_colName:" << colName << endl;
+        //cout << ts->val << endl;
+
         cl = tb->ColMap[colName];
-        char* inx_for_del;
+        char* inx_for_del;            
+        inx_for_del = new char[cl->AttrLength];
 //delete old index
         if (tb->IndexMap[colName] != 0){
             ih = ix->openIndex(indexdir.c_str(), tb->IndexMap[colName]);
-            inx_for_del = new char[cl->AttrLength];
+            //cout << tb->IndexMap[colName] << endl;
             memcpy(inx_for_del, upd_data + cl->AttrOffset, cl->AttrLength);
             ih->deleteEntry(inx_for_del, updrid);
         }
         if (cl->type == INTEGER)memcpy(upd_data + cl->AttrOffset, (char*)(&(ts->val)), cl->AttrLength);
         if (cl->type == FLOAT)memcpy(upd_data + cl->AttrOffset, (char*)(&(ts->floatval)), cl->AttrLength);
-        if (cl->type == STRING)memcpy(upd_data + cl->AttrOffset, ts->strval, cl->AttrLength);
+        if (cl->type == STRING)strncpy(upd_data + cl->AttrOffset, ts->strval, cl->AttrLength);
 //insert new index
         if (tb->IndexMap[colName] != 0){
             memcpy(inx_for_del, upd_data + cl->AttrOffset, cl->AttrLength);
@@ -441,8 +455,17 @@ void QLManager::UpdateCol(string tableName, RMRecord rec, const map<string, Expr
         }
         delete[] inx_for_del;
     }
-
-    RMRecord newrec(updrid, upd_data);
+    /*
+    cout << "data after update " << endl;
+    for (int i = 0; i < tb->recSize; i++){
+        printf("%02x ", upd_data[i]);
+    }
+    cout << endl;
+    cout << updrid.getPage() << " " << updrid.getSlot() << endl;*/
+    string s_for_upd;
+    s_for_upd.resize(tb->recSize + 1);
+    for (int i = 0; i < tb->recSize; i++)s_for_upd[i] = upd_data[i];
+    RMRecord newrec(updrid, s_for_upd);
     RMFile rh = rm->openFile(datadir.c_str());
     rh.updateRec(newrec);
     rm->closeFile(rh);
@@ -470,6 +493,15 @@ bool QLManager::Update(AstUpdate* ast)
     updcolmap.clear();
     bool update_primary = false;
     string priname;
+
+    TableInfo* refTable;
+    ColInfo* refCol;
+    string indexdir;
+    char* tempinx;
+    IXHandler* ih;
+    IXScanner isc;
+    bool check_foreign = true;
+    RID temprid;
 
     for (int i = 0 ; i < setclause->setList.size(); i++){
         st = dynamic_cast<AstSet*>(setclause->setList[i]);
@@ -508,23 +540,43 @@ bool QLManager::Update(AstUpdate* ast)
                 upd_val->type = TYPE_INT;
             }
             if (cl->type == FLOAT){
-                upd_val->val = colval->floatval;
+                if (colval->literalType == L_INT) upd_val->floatval = colval->val;
+                else upd_val->floatval = colval->floatval;
                 upd_val->type = TYPE_FLOAT;
             }
             if (cl->type == STRING){
                 memcpy(upd_val->strval, colval->strval, cl->AttrLength);
                 upd_val->type = TYPE_CHAR;
             }
+            if (cl->isforeign == true){
+                refTable = db_info->TableMap[cl->ref];
+                refCol = refTable->ColMap[cl->refcol];
+                indexdir = "database/" + db_info->name + "/" + refTable->name + "/index";
+                ih = ix->openIndex(indexdir.c_str(), refTable->IndexMap[refCol->name]);
+                tempinx = new char[ih->attrlen];
+                if (refCol->type == INTEGER)isc.openScan((*ih), ST_EQ, (void*)(&colval->val));
+                if (refCol->type == FLOAT) {
+                    float v = colval->floatval;
+                    if (colval->literalType == L_INT)
+                        v = (float)colval->val;
+                    isc.openScan((*ih), ST_EQ, (void*)(&v));
+                }
+                if (refCol->type == STRING)isc.openScan((*ih), ST_EQ, (void*)(colval->strval));
+                if(isc.nextRec(temprid, tempinx) == false) check_foreign = false;
+                isc.closeScan();
+                ix->closeIndex(*ih);
+                delete[] tempinx;
+            }
         }
         if (updcolmap[colname] != NULL) return false;
         updcolmap[colname] = upd_val;
     }
 
-    IXHandler* ih = ix->openIndex(inxdir.c_str(), 0);
-    IXScanner isc;
+    cout << "check for update fin!" << endl;
+    if (check_foreign == false) return false;
+
+    ih = ix->openIndex(inxdir.c_str(), 0);
     RMFile rh = rm->openFile(datadir.c_str());
-    char* tempinx;
-    RID temprid;
 
     tempinx = new char[ih->attrlen];
     map <string, RMRecord> recmap;
@@ -544,6 +596,9 @@ bool QLManager::Update(AstUpdate* ast)
     ix->closeIndex(*ih);    
     rm->closeFile(rh);
 
+    cout << "upd size:" << upd_rec.size() << endl;
+    delete[] tempinx;
+
     bool pcheck = true;
     if (update_primary == true){
 //check for update primary(the updated primary key already exists)
@@ -560,13 +615,16 @@ bool QLManager::Update(AstUpdate* ast)
                 pcheck = false;
         }
         isc.closeScan();
-        ix->closeIndex(*ih);
+        ix->closeIndex(*ih);    
+        delete[] tempinx;
         if (!pcheck) return false;
     }
 
-    for (int i = 0; i < upd_rec.size(); i++)UpdateCol(tableName, upd_rec[i], updcolmap);
-
-    return false;
+    for (int i = 0; i < upd_rec.size(); i++){
+        cout << "update " << i << endl;
+        UpdateCol(tableName, upd_rec[i], updcolmap);
+    }
+    return true;
 }
 
 typedef function<void(const map<string, RMRecord>&)> CallbackType;
