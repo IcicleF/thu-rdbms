@@ -356,7 +356,7 @@ bool QLManager::checkvalue(string tableName, string colName, ExprType chkval)
     ix->closeIndex(*ih);
     rm->closeFile(rh);
     delete[] tempinx;
-    
+
     return exist;
 
 }
@@ -701,7 +701,7 @@ bool QLManager::Update(AstUpdate* ast)
     delete[] tempinx;
 
     bool pcheck = true;
-    if (update_primary == true){
+    if (update_primary == true){        
 //check for update primary(the updated primary key already exists)
         if(upd_rec.size() > 1)return false;
         ih = ix->openIndex(inxdir.c_str(), 1);
@@ -717,9 +717,10 @@ bool QLManager::Update(AstUpdate* ast)
         }
         isc.closeScan();
         ix->closeIndex(*ih);    
-        delete[] tempinx;
+        delete[] tempinx;        
         rh = rm->openFile(datadir.c_str());
-        RMRecord rmc = rh.getRec(temprid);
+        RMRecord rmc = rh.getRec(upd_rid);
+        rm->closeFile(rh);
         ExprType chk = getColumn(rmc, tableName, priname);
         if (checkforeignkey(tableName, priname, chk) == false) pcheck = false;
         if (!pcheck) return false;
