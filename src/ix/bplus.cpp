@@ -19,7 +19,7 @@ BPlusTree::BPlusTree(BufPageManager* bpm, int fileId) {
     this->_root = p0[3];
     //cout << attrLen << " " << _nodeNum << " " << _root << endl;
     fanOut = (PAGE_SIZE - 16) / (attrLen + 6) + 1;
-    fanOut = 64;          
+    fanOut = 4;          
     if (fanOut & 1)
         fanOut -= 1;        // force even
     cur.owner = this;
@@ -278,22 +278,24 @@ void BPlusTree::makeRoot(void* pData, int left, int right) {
 void BPlusTree::deleteInnerNode(int pageId)
 {
     if (pageId == root()) return;
-    BPlusNode tcur,fa,lsib,rsib,child;
+    BPlusNode fa,lsib,rsib,child,tcur;
     BPlusNode temp;
     short tempcount;
-    temp.owner = this;
     tcur.owner = this;
     tcur.pageId = pageId;
     tcur.getPage();
     if (tcur.count() >= (fanOut-1)/2 ) return;
+    cout << "DeleteInner " << tcur.pageId << endl;
+    temp.owner = this;
+    temp.page = new unsigned char[PAGE_SIZE + 20];
     int faid,fa_pos;
     faid = tcur.parent();
     fa.owner = this;
     fa.pageId = faid;
     fa.getPage();
-    
-    child.owner = this;
 
+    child.owner = this;
+    
     for (int i = 0; i <= fa.count(); i++){
         if (fa.child(i) == tcur.pageId){
             fa_pos = i;
@@ -304,7 +306,6 @@ void BPlusTree::deleteInnerNode(int pageId)
     bool pl,pr;
     pl = false;
     pr = false;
-    fa.getPage();
     if (fa_pos != 0){
         lsib.pageId = fa.child(fa_pos - 1);
         lsib.owner = this;
@@ -326,6 +327,9 @@ void BPlusTree::deleteInnerNode(int pageId)
             tcur.setChild(tcur.count() + 1, tcur.child(tcur.count()));
             for (int i = tcur.count() - 1; i >= 0 ; i--)tcur.setBlock(i+1, tcur.block(i));
             tcur.setChild(0, temp.child(temp.count()));
+            child.pageId = temp.child(temp.count());
+            child.getPage();
+            child.setParent(tcur.pageId);
             fa.getPage();
             memcpy(temp.page, fa.page, PAGE_SIZE);//temp = fa
             tcur.getPage();
@@ -336,6 +340,8 @@ void BPlusTree::deleteInnerNode(int pageId)
             fa.getPage();
             fa.setVal(fa_pos - 1, temp.val(temp.count() - 1));
             lsib.getPage();
+            lsib.setChild(lsib.count(), 0);
+            lsib.clearVal(lsib.count() - 1);
             lsib.setCount(lsib.count() - 1);
         }
         else {
@@ -348,11 +354,16 @@ void BPlusTree::deleteInnerNode(int pageId)
             tcur.getPage();
             tcur.setChild(tcur.count() + 1, temp.child(0));
             tcur.setCount(tcur.count() + 1);
+            child.pageId = temp.child(0);
+            child.getPage();
+            child.setParent(tcur.pageId);
             fa.getPage();
             fa.setVal(fa_pos, temp.val(0));
             rsib.getPage();
             for(int i = 1; i < rsib.count(); i++)rsib.setBlock(i-1, rsib.block(i));
             rsib.setChild(rsib.count() - 1, rsib.child(rsib.count()));
+            rsib.clearVal(rsib.count() - 1);
+            rsib.setChild(rsib.count(), 0);
             rsib.setCount(rsib.count() - 1);
         }
     }
@@ -377,23 +388,25 @@ void BPlusTree::deleteInnerNode(int pageId)
             tcur.getPage();
             tcur.setVal(tempcount, temp.val(fa_pos - 1));
             tcur.setCount(tcur.count() + tempcount + 1);
-            bpm->release(lsib.pageId);
             if (faid == root() && fa.count() == 1){
-                bpm->release(faid);
+                tcur.setParent(0);
                 this->setRoot(tcur.pageId);
                 this->setNodeNum(this->nodeNum() - 1);
+                delete[] temp.page;
                 return;
             }
             else{
                 fa.getPage();
                 for(int i = fa_pos; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
                 fa.setChild(fa.count() - 1, fa.child(fa.count()));
+                fa.setChild(fa.count(), 0);
+                fa.clearVal(fa.count() - 1);
                 fa.setCount(fa.count() - 1);
             }
         }
         else {
             tcur.getPage();
-            memcpy(temp.page, tcur.page, PAGE_SIZE);//temp = tcur
+            memcpy(temp.page, tcur.page, PAGE_SIZE);//temp = cur
             rsib.getPage();
             rsib.setChild(temp.count() + rsib.count() + 1, rsib.child(rsib.count()));
             for(int i = 0; i <= temp.count(); i++){
@@ -404,81 +417,86 @@ void BPlusTree::deleteInnerNode(int pageId)
             for(int i = rsib.count() - 1 ; i >= 0 ; i--)rsib.setBlock(i + temp.count() + 1, rsib.block(i));
             for(int i = 0; i < temp.count(); i++)rsib.setBlock(i, temp.block(i));
             rsib.setChild(temp.count(), temp.child(temp.count()));
-            tempcount = tcur.count(); //tempcount = tcur.count
+            tempcount = tcur.count(); //tempcount = cur.count
             fa.getPage();
             memcpy(temp.page, fa.page, PAGE_SIZE);//temp = fa
             rsib.getPage();
             rsib.setVal(tempcount, temp.val(fa_pos));
             rsib.setCount(tempcount + rsib.count() + 1);
-            bpm->release(tcur.pageId);
             if (faid == root() && fa.count() == 1){
-                bpm->release(faid);
+                rsib.setParent(0);
                 this->setRoot(rsib.pageId);
                 this->setNodeNum(this->nodeNum() - 1);
+                delete[] temp.page;
                 return;
             }
             else{
                 fa.getPage();
                 for(int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
                 fa.setChild(fa.count() - 1, fa.child(fa.count()));
+                fa.setChild(fa.count(), 0);
+                fa.clearVal(fa.count() - 1);
                 fa.setCount(fa.count() - 1);
             }
 
         }
         deleteInnerNode(faid);
     }
+    delete[] temp.page;
 }
 
 bool BPlusTree::deleteEntry(void *pData, const RID& rid) 
 {
     RID rs;
-    BPlusNode tcur,fa,lsib,rsib,child;
+    BPlusNode fa,lsib,rsib,child;
     BPlusNode temp;
-    temp.owner = this;
-    temp.page = new unsigned char[PAGE_SIZE + 20];
+    int pos,res;
     if(!searchEntry(pData, rs)){
         return false;
     }
     else{
+        cout << "deleteEntry " << cur.pageId << endl;
+        temp.owner = this;
+        temp.page = new unsigned char[PAGE_SIZE + 20];
         child.owner = this;
 
-        tcur.pageId = cur.pageId;
-        tcur.owner = this;
-        tcur.getPage();
         int faid,fa_pos;
-        if (tcur.pageId != root()){
-            faid = tcur.parent();
+        if (cur.pageId != root()){
+            faid = cur.parent();
             fa.pageId = faid;
-            fa.owner = this;
+            fa.owner = this;        
             fa.getPage();
             for (int i = 0; i <= fa.count(); i++){
-                if (fa.child(i) == tcur.pageId){
+                if (fa.child(i) == cur.pageId){
                     fa_pos = i;
                     break;
                 }
             }
-        }
-        cout << "Delete " << (char *)pData << endl;
+        }            
+       // cout << "Delete " << endl;
         //删除操作
-        tcur.getPage();
-        int pos = 0;
-        for (int i = 0 ; i < tcur.count() ; i++){
-            if (cmp(pData, tcur.val(i)) == 0){
+        pos = 0;
+        for (int i = 0 ; i < cur.count() ; i++){
+            res = cmp(pData, cur.val(i));
+            if (res == 0){
                 pos = i;
                 break;
             }
         }
-        for (int i = pos + 1; i < tcur.count(); i++)tcur.setBlock(i-1, tcur.block(i));
-        tcur.setChild(tcur.count() - 1, tcur.child(tcur.count()));
-        tcur.setCount(tcur.count() - 1);
-        if (tcur.pageId != root()){
+
+        for (int i = pos + 1; i < cur.count(); i++)cur.setBlock(i-1, cur.block(i));
+        cur.setChild(cur.count() - 1, cur.child(cur.count()));
+        cur.setCount(cur.count() - 1);
+        if (cur.pageId != root()){
             fa.getPage();
-            if (pos == 0) fa.setVal(fa_pos - 1, tcur.val(0));
+            if (pos == 0 && fa_pos != 0) fa.setVal(fa_pos - 1, cur.val(0));
+            cur.getPage();
         }
 
-        if (tcur.count() < (fanOut - 1)/2 && tcur.pageId != root()){
-            cout << "delete special" << endl;
-            // 删除的特殊处理
+        if (cur.count() < (fanOut - 1)/2 && cur.pageId != root()){
+            //cout << "delete special" << endl;
+            // 删除的特殊处理        
+
             bool pl,pr;
             pl = false;
             pr = false;
@@ -495,7 +513,7 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                 rsib.pageId = fa.child(fa_pos + 1);
                 rsib.getPage();
                 if (rsib.count() > (fanOut-1)/2)pr = true;
-            }
+            }                        
             if(pl == true || pr == true){
                 //直接由兄弟节点借
                 if (pl == true){
@@ -503,14 +521,15 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                     memcpy(temp.page, lsib.page, PAGE_SIZE);//temp = lsib
                     fa.getPage();
                     fa.setVal(fa_pos - 1, temp.val(temp.count() - 1));
-                    tcur.getPage();
-                    tcur.setChild(tcur.count()+1, tcur.child(tcur.count()));
-                    for(int i = tcur.count() - 1; i >= 0; i--)tcur.setBlock(i+1, tcur.block(i));
-                    tcur.setCount(tcur.count() + 1);
-                    tcur.setBlock(0, temp.block(temp.count()-1));
+                    cur.getPage();
+                    cur.setChild(cur.count()+1, cur.child(cur.count()));
+                    for(int i = cur.count() - 1; i >= 0; i--)cur.setBlock(i+1, cur.block(i));
+                    cur.setCount(cur.count() + 1);
+                    cur.setBlock(0, temp.block(temp.count()-1));
                     lsib.getPage();
                     lsib.clearBlock(lsib.count() - 1);
-                    lsib.setChild(lsib.count() - 1, lsib.count());
+                    lsib.setChild(lsib.count() - 1, lsib.child(lsib.count()));
+                    lsib.setChild(lsib.count(), 0);
                     lsib.setCount(lsib.count() - 1);
                 }
                 else{
@@ -518,14 +537,15 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                     memcpy(temp.page, rsib.page, PAGE_SIZE);//temp = rsib;
                     fa.getPage();
                     fa.setVal(fa_pos, temp.val(1));
-                    tcur.getPage();
-                    tcur.setChild(tcur.count() + 1, tcur.child(tcur.count()));
-                    tcur.setBlock(tcur.count(), temp.block(0));
-                    tcur.setCount(tcur.count() + 1);
+                    cur.getPage();
+                    cur.setChild(cur.count() + 1, cur.child(cur.count()));
+                    cur.setBlock(cur.count(), temp.block(0));
+                    cur.setCount(cur.count() + 1);
                     rsib.getPage();
                     for(int i = 1; i < rsib.count(); i++)rsib.setBlock(i - 1, rsib.block(i));
                     rsib.clearBlock(rsib.count() - 1);
                     rsib.setChild(rsib.count() - 1, rsib.child(rsib.count()));
+                    rsib.setChild(rsib.count(), 0);
                     rsib.setCount(rsib.count() - 1);
                 }
             }
@@ -533,55 +553,54 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
                 this->setNodeNum(this->nodeNum() - 1);
                 //和兄弟节点合并，向父节点传递
                 if (fa_pos != 0){
-                    tcur.getPage();
-                    memcpy(temp.page, tcur.page ,PAGE_SIZE);//temp = tcur
+                    cur.getPage();
+                    memcpy(temp.page, cur.page ,PAGE_SIZE);//temp = cur
                     lsib.getPage();
                     for (int i = 0; i < temp.count(); i++)lsib.setBlock(i + lsib.count(), temp.block(i));
                     lsib.setChild(temp.count() + lsib.count(), temp.child(temp.count()));
                     lsib.setCount(temp.count() + lsib.count());
-                    bpm->release(tcur.pageId);
                     if (faid == root() && fa.count() == 1){
-                        bpm->release(faid);
                         this->setRoot(lsib.pageId);
                         lsib.setParent(0);
                         this->setNodeNum(this->nodeNum() - 1);
+                        delete[] temp.page;
                         return true;
                     }
                     else{
                         fa.getPage();
                         if (fa_pos < fa.count())fa.setVal(fa_pos - 1, fa.val(fa_pos));
                         for (int i = fa_pos + 1; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
-                        fa.setChild(fa.count() - 1, fa.child(fa.count()));
+                        if (fa_pos + 1 <= fa.count())fa.setChild(fa.count() - 1, fa.child(fa.count()));
                         fa.setCount(fa.count() - 1);
                     }
                 }
                 else{
                     rsib.getPage();
                     memcpy(temp.page, rsib.page, PAGE_SIZE);//temp = rsib
-                    tcur.getPage();
-                    for (int i = 0; i < temp.count(); i++)tcur.setBlock(i + tcur.count(), temp.block(i));
-                    tcur.setChild(tcur.count() + temp.count(), temp.child(temp.count()));
-                    tcur.setCount(tcur.count() + temp.count());
-                    bpm->release(rsib.pageId);
+                    cur.getPage();
+                    for (int i = 0; i < temp.count(); i++)cur.setBlock(i + cur.count(), temp.block(i));
+                    cur.setChild(cur.count() + temp.count(), temp.child(temp.count()));
+                    cur.setCount(cur.count() + temp.count());
                     if (faid == root() && fa.count() == 1){
-                        bpm->release(faid);
-                        this->setRoot(tcur.pageId);
-                        tcur.setParent(0);
+                        this->setRoot(cur.pageId);
+                        cur.setParent(0);
                         this->setNodeNum(this->nodeNum() - 1);
+                        delete[] temp.page;
                         return true;
                     }
                     else{
-                        fa.getPage();
+                        fa.getPage();                        
                         if (fa_pos + 1 < fa.count())fa.setVal(fa_pos, fa.val(fa_pos + 1));
                         for (int i = fa_pos + 2; i < fa.count(); i++)fa.setBlock(i-1, fa.block(i));
-                        fa.setChild(fa.count() - 1, fa.child(fa.count()));
-                        fa.setCount(fa.count() - 1);                       
+                        if (fa_pos + 2 <= fa.count())fa.setChild(fa.count() - 1, fa.child(fa.count()));
+                        fa.setCount(fa.count() - 1);
                     }
                 }
                 deleteInnerNode(faid);
             }
         }
     }
+    delete[] temp.page;
     return true;
 }
 

@@ -313,44 +313,55 @@ bool QLManager::Insert(AstInsert* ast)
     return true;
 }
 
-void QLManager::DeleteCol(string tableName, IndexRM rx)
+void QLManager::DeleteCol(string tableName, IndexRM* rx)
 {
     TableInfo* tb = db_info->TableMap[tableName];
     string inxdir = "database/" + db_info->name + "/" + tableName + "/index";
     string datadir = "database/" + db_info->name + "/" + tableName + "/data.txt";
     IXHandler* ih = ix->openIndex(inxdir.c_str(), 0);
-    ih->deleteEntry(rx.index, rx.rid);
+
+    ih->deleteEntry((void*)rx->index, rx->rid);
     ix->closeIndex(*ih);
+    cout << "Delete Entry0 finished" << endl;
     RMFile rh;
-    RMRecord rmc;
+    RMRecord rmc;            
+
+
     rh = rm->openFile(datadir.c_str());
-    rh.deleteRec(rx.rid);
+    
+    rmc = rh.getRec(rx->rid);    
     char* tempinx;
-    tempinx = new char[tb->recSize];
+    tempinx = new char[tb->recSize];            
+    rmc.getData(tempinx);
+
+    rh.deleteRec(rx->rid);    
+    rm->closeFile(rh);
+    cout << "delete record finished" << endl;
+
     for (int i = 0 ; i < tb->cols.size(); i++){
         if (tb->IndexMap[tb->cols[i]] != 0){
             ih = ix->openIndex(inxdir.c_str(), tb->IndexMap[tb->cols[i]]);
             
-            rmc = rh.getRec(rx.rid);
             char* inx_for_del;
             
             ColInfo* cl = tb->ColMap[tb->cols[i]];
             inx_for_del = new char[cl->AttrLength];
-            rmc.getData(tempinx);
             memcpy(inx_for_del, tempinx + cl->AttrOffset, cl->AttrLength);
 
-            ih->deleteEntry(inx_for_del, rx.rid);
+            ih->deleteEntry(inx_for_del, rx->rid);
             ix->closeIndex(*ih);
+            delete[] inx_for_del;
+
         }
     }
-    rm->closeFile(rh);
+    delete[] tempinx;
 }
 
 bool QLManager::Delete(AstDelete* ast)
 {
     if (db_info == NULL) return false;
 
-    vector<IndexRM> dels;
+    vector<IndexRM*> dels;
     dels.clear();
 
     string tableName = dynamic_cast<AstIdentifier*>(ast->table)->toString();
@@ -368,17 +379,26 @@ bool QLManager::Delete(AstDelete* ast)
     recmap.clear();
 
     isc.openScan(*ih, ST_NOP, tempinx);
+    IndexRM *tempr;
     while (isc.nextRec(temprid, tempinx)) {
         recmap[tableName] = rh.getRec(temprid);
-        if (checkWhere(ast->whereClause, recmap))dels.push_back(IndexRM(temprid, tempinx));
+        if (checkWhere(ast->whereClause, recmap)){
+            tempr = new IndexRM(temprid, tempinx);
+            dels.push_back(tempr);
+        }
     }
     isc.closeScan();
     ix->closeIndex(*ih);    
     rm->closeFile(rh);
+    for (int i = 0; i < dels.size(); i++){        
+        cout << "delete index " << i << endl;
+        cout << *((int *)dels[i]->index) << ":" << dels[i]->rid.getPage() << ":" << dels[i]->rid.getSlot() << endl;
+        DeleteCol(tableName, dels[i]);
+    }
+    cout << "delsize " << dels.size() << endl;
+    delete[] tempinx;
+    return true;    
 
-    for (int i = 0; i < dels.size(); i++)DeleteCol(tableName, dels[i]);
-    
-    return true;
 }
 
 void QLManager::UpdateCol(string tableName, RMRecord rec, const map<string, ExprType*>& recmap)
@@ -419,12 +439,14 @@ void QLManager::UpdateCol(string tableName, RMRecord rec, const map<string, Expr
             ih->insertEntry(inx_for_del, updrid);
             ix->closeIndex(*ih);
         }
+        delete[] inx_for_del;
     }
 
     RMRecord newrec(updrid, upd_data);
     RMFile rh = rm->openFile(datadir.c_str());
     rh.updateRec(newrec);
     rm->closeFile(rh);
+    delete[] upd_data;
 }
 
 bool QLManager::Update(AstUpdate* ast)
@@ -490,7 +512,7 @@ bool QLManager::Update(AstUpdate* ast)
                 upd_val->type = TYPE_FLOAT;
             }
             if (cl->type == STRING){
-                strncpy(upd_val->strval, colval->strval, cl->AttrLength);
+                memcpy(upd_val->strval, colval->strval, cl->AttrLength);
                 upd_val->type = TYPE_CHAR;
             }
         }

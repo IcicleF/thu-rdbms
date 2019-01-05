@@ -85,6 +85,12 @@ void BPlusNode::setVal(int i, void* pData) {
     owner->bpm->markDirty(pageIndex);
     owner->usedPages.insert(pageIndex);
 }
+void BPlusNode::clearVal(int i) {
+    int offs = 16 + (getAttrLen() + 6) * i;
+    memset(page + offs, 0, getAttrLen());
+    owner->bpm->markDirty(pageIndex);
+    owner->usedPages.insert(pageIndex);
+}
 
 int BPlusNode::child(int i) const {
     int offs = 10 + (getAttrLen() + 6) * i;

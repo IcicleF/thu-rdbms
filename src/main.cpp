@@ -61,11 +61,6 @@ void test2() {
     auto dele = [&](const char* s, int page, short slot) -> void {
         ih->deleteEntry((void *)s, RID(page, slot));
     };
-    dele("2122", 212, 44);
-    dele("abcd", 10, 343);
-    dele("01z", 4, 239);
-    dele("abzz", 2, 1349);
-    dele("0", 122349, 16);
     ih->bpt->printTree();
     
     bpm->close();
@@ -103,5 +98,6 @@ int main() {
         cout << endl;
     }
     delete global;
+    //test2();
     return 0;
 }

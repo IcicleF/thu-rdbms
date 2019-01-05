@@ -51,6 +51,7 @@ struct BPlusNode {
     // access address of attribute of record #i
     void* val(int i) const;
     void setVal(int i, void* pData);
+    void clearVal(int i);
 
     // access child node #i (from #0)
     int child(int i) const;

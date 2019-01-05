@@ -20,11 +20,12 @@
 
 struct IndexRM{
     RID rid;
-    void* index;
+    char* index;
 
-    IndexRM(RID rs, void* inx){
-        rid = RID(rs.getPage(), rs.getSlot());;
-        index = inx;
+    IndexRM(RID rs, char* inx){
+        rid = RID(rs.getPage(), rs.getSlot());
+        index = new char[4];
+        memcpy(index, inx, 4);
     }
 };
 
@@ -43,7 +44,7 @@ class QLManager{
     private:
         RMManager *rm;
         IXManager *ix;
-        void DeleteCol(std::string, IndexRM);
+        void DeleteCol(std::string, IndexRM*);
         void UpdateCol(std::string, RMRecord, const std::map<std::string, ExprType*>&);
         bool checktype(AstLiteral*, ColInfo*);
 };
