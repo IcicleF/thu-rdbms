@@ -139,6 +139,7 @@ bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
                 else
                     vr = calcExpr(wh->rhs);
                 
+                //cout << vl.type << " " << vr.type << endl;
                 bool vlStr = (vl.type != TYPE_INT) && (vl.type != TYPE_FLOAT);
                 bool vrStr = (vr.type != TYPE_INT) && (vr.type != TYPE_FLOAT);
                 bool compat = vlStr == vrStr;
@@ -151,7 +152,7 @@ bool checkWhere(AstBase* _wh, const map<string, RMRecord>& recs) {
                 
                 float diff = 0;
                 if (!compat)
-                    throw EvalException("comparing incompatible types");
+                    throw EvalException("cannot compare incompatible types");
                 else if (vlStr)
                     diff = (float)strcmp(vl.strval, vr.strval);
                 else
@@ -183,13 +184,19 @@ ExprType calcExpr(AstBase* expr) {
     // expr cannot be instance of AstNull because we have checked it in checkWhere
     ExprType res;
     if (expr->type == AST_LITERAL) {
-        res.type = dynamic_cast<AstLiteral*>(expr)->literalType;
-        if (res.type == TYPE_INT)
+        int type = dynamic_cast<AstLiteral*>(expr)->literalType;
+        if (type == L_INT) {
+            res.type = TYPE_INT;
             res.val = expr->val;
-        else if (res.type == TYPE_FLOAT)
+        }
+        else if (type == L_DECIMAL) {
+            res.type = TYPE_FLOAT;
             res.floatval = expr->floatval;
-        else
-            res.strval = expr->strval;          // do not copy string here because expr remains unchanged (till now)
+        }
+        else {
+            res.type = TYPE_CHAR;
+            res.strval = expr->strval;          // do not copy string here because expr remains unchanged
+        }
     }
     else {
         auto e = dynamic_cast<AstExpr*>(expr);
