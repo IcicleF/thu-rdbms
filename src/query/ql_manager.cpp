@@ -313,8 +313,82 @@ bool QLManager::Insert(AstInsert* ast)
     return true;
 }
 
-bool QLManager::checkforeignkey(string tableName, string colName)
+bool QLManager::checkvalue(string tableName, string colName, ExprType chkval)
 {
+    string datadir = "database/" + db_info->name + "/" + tableName + "/data.txt";
+    string indexdir = "database/" + db_info->name + "/" + tableName + "/index";
+
+    IXHandler* ih = ix->openIndex(indexdir.c_str(), 0);
+    IXScanner isc;
+    char* tempinx;
+
+    TableInfo* tb;
+    ColInfo* cl;
+    tb = db_info->TableMap[tableName];
+    cl = tb->ColMap[colName];
+    tempinx = new char[ih->attrlen];
+    isc.openScan(*ih, ST_NOP, tempinx);
+
+    RMFile rh = rm->openFile(datadir.c_str());
+
+    RID temprid;
+    RMRecord rmc;
+    ExprType scanval;
+    
+    bool exist = false;
+
+    while(isc.nextRec(temprid, tempinx)){
+        rmc = rh.getRec(temprid);
+        scanval = getColumn(rmc, tableName, colName);
+        if (cl->type == INTEGER){
+            if (scanval.val == chkval.val) exist = true;
+        }
+        else if (cl->type == FLOAT){
+            if (fabs(scanval.floatval - chkval.floatval) < 1e-7) exist = true;
+        }
+        else if (cl->type == STRING){
+            if (strncmp(scanval.strval, chkval.strval, cl->AttrLength) == 0) exist = true;
+        }
+        if (exist) break;
+    }
+
+    isc.closeScan();
+    ix->closeIndex(*ih);
+    rm->closeFile(rh);
+    delete[] tempinx;
+    
+    return exist;
+
+}
+
+bool QLManager::checkforeignkey(string tableName, string colName, ExprType chkval)
+{
+    map<string, TableInfo*>::iterator tb_it;
+    map<string, ColInfo*>::iterator cl_it;
+
+    TableInfo* tb;
+    ColInfo* cl;
+    tb = db_info->TableMap[tableName];
+    cl = tb->ColMap[colName];
+    
+    string tbName;
+    TableInfo* refTable;
+    bool has_foreign = false;
+    string clName;
+    ColInfo* refCol;
+
+    for (tb_it = db_info->TableMap.begin(); tb_it != db_info->TableMap.end(); tb_it++){
+        tbName = tb_it->first;
+        refTable = tb_it->second;
+        for (cl_it = refTable->ColMap.begin(); cl_it != refTable->ColMap.end(); cl_it++){
+            refCol = cl_it->second;
+            if (refCol->isforeign && refCol->ref == tableName && refCol->refcol == colName){
+                has_foreign = checkvalue(refTable->name, refCol->name, chkval);
+                if (has_foreign == true)return false;
+            }
+        }
+    }
+    return true;
 
 }
 
@@ -366,6 +440,7 @@ bool QLManager::Delete(AstDelete* ast)
 {
     if (db_info == NULL) return false;
 
+
     vector<IndexRM*> dels;
     dels.clear();
 
@@ -373,9 +448,23 @@ bool QLManager::Delete(AstDelete* ast)
     string datadir = "database/" + db_info->name + "/" + tableName + "/data.txt";
     string inxdir = "database/" + db_info->name + "/" + tableName + "/index";
 
+    ColInfo* cl;
+    TableInfo* tb;
+    map<string, ColInfo*>::iterator itv;
+    tb = db_info->TableMap[tableName];
+    if (tb == NULL) return false;
+    string priname;
+    for (itv = tb->ColMap.begin(); itv != tb->ColMap.end(); itv++){
+        cl = itv->second;
+        if (cl->isprimary) priname = cl->name;
+    }
+
+
     IXHandler* ih = ix->openIndex(inxdir.c_str(), 0);
     IXScanner isc;
     RMFile rh = rm->openFile(datadir.c_str());
+    RMRecord rmc;
+    ExprType chk;
     char* tempinx;
     RID temprid;
 
@@ -385,16 +474,28 @@ bool QLManager::Delete(AstDelete* ast)
 
     isc.openScan(*ih, ST_NOP, tempinx);
     IndexRM *tempr;
+
+    bool has_foreign = true;
+
     while (isc.nextRec(temprid, tempinx)) {
         recmap[tableName] = rh.getRec(temprid);
+        rmc = rh.getRec(temprid);
         if (checkWhere(ast->whereClause, recmap)){
             tempr = new IndexRM(temprid, tempinx);
             dels.push_back(tempr);
+            chk = getColumn(rmc, tableName, priname);
+            if (checkforeignkey(tableName, priname, chk) == false) has_foreign = false;
         }
     }
     isc.closeScan();
     ix->closeIndex(*ih);    
     rm->closeFile(rh);
+
+    if (has_foreign == false){
+        delete[] tempinx;
+        return false;
+    }
+
     for (int i = 0; i < dels.size(); i++){        
         cout << "delete index " << i << endl;
         cout << *((int *)dels[i]->index) << ":" << dels[i]->rid.getPage() << ":" << dels[i]->rid.getSlot() << endl;
@@ -545,9 +646,9 @@ bool QLManager::Update(AstUpdate* ast)
                 upd_val->type = TYPE_FLOAT;
             }
             if (cl->type == STRING){
-                memcpy(upd_val->strval, colval->strval, cl->AttrLength);
+                strncpy(upd_val->strval, colval->strval, cl->AttrLength);
                 upd_val->type = TYPE_CHAR;
-            }
+            }            
             if (cl->isforeign == true){
                 refTable = db_info->TableMap[cl->ref];
                 refCol = refTable->ColMap[cl->refcol];
@@ -617,6 +718,10 @@ bool QLManager::Update(AstUpdate* ast)
         isc.closeScan();
         ix->closeIndex(*ih);    
         delete[] tempinx;
+        rh = rm->openFile(datadir.c_str());
+        RMRecord rmc = rh.getRec(temprid);
+        ExprType chk = getColumn(rmc, tableName, priname);
+        if (checkforeignkey(tableName, priname, chk) == false) pcheck = false;
         if (!pcheck) return false;
     }
 

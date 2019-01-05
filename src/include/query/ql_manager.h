@@ -47,7 +47,8 @@ class QLManager{
         void DeleteCol(std::string, IndexRM*);
         void UpdateCol(std::string, RMRecord, const std::map<std::string, ExprType*>&);
         bool checktype(AstLiteral*, ColInfo*);
-        bool checkforeignkey(std::string, std::string);
+        bool checkforeignkey(std::string, std::string, ExprType);
+        bool checkvalue(std::string, std::string, ExprType);
 };
 
 #endif
