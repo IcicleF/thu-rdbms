@@ -1,6 +1,8 @@
 #include "meta/MetaManager.h"
 #include "global.h"
 
+#include <cassert>
+
 using namespace std;
 
 extern Global* global;
@@ -101,7 +103,7 @@ TableInfo* MetaManager::InitTable(string db, string tabledir)
     string datadir = tabledir + "/data.txt";
     //cout << "data is " << datadir << endl;
     FILE *fid = fopen((tabledir + "/newid.txt").c_str(), "r");
-    fscanf(fid, "%d", &(nt->newid));
+    assert(fscanf(fid, "%d", &(nt->newid)) > 0);
     fclose(fid);
     
     recSize = 0;
@@ -468,7 +470,7 @@ bool MetaManager::createTable(AstCreateTable* ast) {
     }
     else{
         DBInfo *tempdb = dbMap[workingDB];
-        cout << "recSize is " << recSize << endl;
+        //cout << "recSize is " << recSize << endl;
         rm->createFile(DataName.c_str(), recSize);
         TableInfo* nt = InitTable(workingDB, tableDir);
         tempdb->tablenum++;

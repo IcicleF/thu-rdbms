@@ -170,6 +170,7 @@ bool QLManager::Insert(AstInsert* ast)
                     isc.closeScan();
                     //printf("      scan closed, pcheck=%s\n", pcheck ? "true" : "false");
                     ix->closeIndex(*ih1);
+                    //delete ih1;
                     //printf("      index closed\n");
                 }
                 if(cl->isforeign){//existed foreign key check
@@ -189,6 +190,7 @@ bool QLManager::Insert(AstInsert* ast)
                     if(isc.nextRec(temprid, tempinx) == false) pcheck = false;
                     isc.closeScan();
                     ix->closeIndex(*ih1);
+                    //delete ih1;
                 }
             }
             else pcheck = false;
@@ -201,7 +203,7 @@ bool QLManager::Insert(AstInsert* ast)
         cout << "illegal input record" << endl;
         return false;
     }
-    printf("check fin!\n");
+    //printf("check fin!\n");
     string datadir = "database/" + db_info->name + "/" + tableName + "/data.txt";
     char* Data;
     
