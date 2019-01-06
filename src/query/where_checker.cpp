@@ -52,12 +52,13 @@ bool checkDateStr(string strval) {
 
 ExprType getColumn(const RMRecord& rec, string tableName, string colName) {
     ColInfo* cInfo = NULL;
-    try {
-        cInfo = global->ql->db_info->TableMap[tableName]->ColMap[colName];
+    if (global->ql->db_info->TableMap.find(tableName) == global->ql->db_info->TableMap.end()) {
+        throw EvalException("unknown table name");
     }
-    catch (exception e) {
-        throw EvalException("unknown table or column name");
+    if (global->ql->db_info->TableMap[tableName]->ColMap.find(colName) == global->ql->db_info->TableMap[tableName]->ColMap.end()) {
+        throw EvalException("unknown column name");
     }
+    cInfo = global->ql->db_info->TableMap[tableName]->ColMap[colName];
 
     ExprType result;
     int offset = cInfo->AttrOffset;
