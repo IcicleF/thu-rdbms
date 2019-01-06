@@ -403,7 +403,6 @@ void QLManager::DeleteCol(string tableName, IndexRM* rx)
 
     ih->deleteEntry((void*)rx->index, rx->rid);
     ix->closeIndex(*ih);
-    cout << "Delete Entry0 finished" << endl;
     RMFile rh;
     RMRecord rmc;            
 
@@ -417,7 +416,6 @@ void QLManager::DeleteCol(string tableName, IndexRM* rx)
 
     rh.deleteRec(rx->rid);    
     rm->closeFile(rh);
-    cout << "delete record finished" << endl;
 
     for (int i = 0 ; i < tb->cols.size(); i++){
         if (tb->IndexMap[tb->cols[i]] != 0){
@@ -500,7 +498,6 @@ bool QLManager::Delete(AstDelete* ast)
 
     for (int i = 0; i < dels.size(); i++){        
         cout << "delete index " << i << endl;
-        cout << *((int *)dels[i]->index) << ":" << dels[i]->rid.getPage() << ":" << dels[i]->rid.getSlot() << endl;
         DeleteCol(tableName, dels[i]);
     }
     cout << "delsize " << dels.size() << endl;

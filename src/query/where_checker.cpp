@@ -58,6 +58,8 @@ ExprType getColumn(const RMRecord& rec, string tableName, string colName) {
     catch (exception e) {
         throw EvalException("unknown table or column name");
     }
+    if (cInfo == NULL)
+        throw EvalException("unknown table or column name");
 
     ExprType result;
     int offset = cInfo->AttrOffset;

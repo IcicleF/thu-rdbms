@@ -286,7 +286,6 @@ void BPlusTree::deleteInnerNode(int pageId)
     tcur.pageId = pageId;
     tcur.getPage();
     if (tcur.count() >= (fanOut-1)/2 ) return;
-    cout << "DeleteInner " << tcur.pageId << endl;
     temp.owner = this;
     temp.page = new unsigned char[PAGE_SIZE + 20];
     int faid,fa_pos;
@@ -456,7 +455,6 @@ bool BPlusTree::deleteEntry(void *pData, const RID& rid)
         return false;
     }
     else{
-        cout << "deleteEntry " << cur.pageId << endl;
         temp.owner = this;
         temp.page = new unsigned char[PAGE_SIZE + 20];
         child.owner = this;
